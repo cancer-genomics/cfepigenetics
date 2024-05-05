@@ -90,7 +90,7 @@ Figure 1
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Fig_1.jpg" width = "400">
 
 * [Pre_Figure1.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure1.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Figure1.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure1.rmd): process summarized file and generate Figure 1.
+* [Figure1.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure1.rmd): process provided summarized file (analytic data) and generate Figure 1.
 * Figure 1D contains a 3D rendering of a nucleosome, as captured from the Protein Data Bank (structure [7COW](https://www.rcsb.org/structure/7cow)).
 
 
@@ -100,7 +100,7 @@ Figure 2
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Fig_2.jpg" width = "400">
 
 * [Pre_Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure2.rmd): process summarized file and generate Figure 2.
+* [Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure2.rmd): process provided summarized file (analytic data) and generate Figure 2.
 
 Figure 3
 --------
@@ -114,8 +114,8 @@ Figure 3
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Fig_3H.jpg" width = "400">
 
 * [Pre_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3.rmd): process summarized file and generate Figure 3 (except Figure 3E and 3F).
-* [Figure3EF.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3EF.rmd): process summarized file and generate Figure 3E and 3F.
+* [Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3.rmd): process provided summarized file (analytic data) and generate Figure 3 (except Figure 3E and 3F).
+* [Figure3EF.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3EF.rmd): process provided summarized file (analytic data) and generate Figure 3E and 3F.
 
 Figure 4
 --------
@@ -124,7 +124,7 @@ Figure 4
 
 * [Pre_Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure4.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Pre_Figure4_Model_Ensemble.Rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure4_Model_Ensemble.Rmd): code that uses the summarized file (all samples) to generate the prediction model and generate a summarized file of this model. The code uses a 10-fold cross validation method, which needs to be manually changed for every fold (indicated in the code).
-* [Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure4.rmd): process summarized files and generate Figure 4.
+* [Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure4.rmd): process provided summarized file (analytic data) and generate Figure 4.
 
 Supplementary Figure 1
 ----------------------
@@ -132,7 +132,7 @@ Supplementary Figure 1
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_1.jpg" width = "400">
 
 * [Pre_Supplementary_Figure1.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure1.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository. This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)). ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure1.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure1.rmd): process summarized file and generate Supplementary Figure 1.
+* [Supplementary_Figure1.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure1.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 1.
 
 Supplementary Figure 2
 ----------------------
@@ -141,7 +141,7 @@ Supplementary Figure 2
 
 This figure is a variation on Figure 2A, using different beta-value cut-offs to define 'methylated' and 'unmethylated'.
 * [Pre_Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure2.rmd): process summarized file and generate Supplementary Figure 2.
+* [Supplementary_Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure2.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 2.
 
 Supplementary Figure 3
 ----------------------
@@ -149,7 +149,7 @@ Supplementary Figure 3
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_3.jpg" width = "400">
 
 * [Pre_Supplementary_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure3.rmd): process summarized file and generate Supplementary Figure 3.
+* [Supplementary_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure3.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 3.
 
 Supplementary Figure 4
 ----------------------
@@ -157,7 +157,7 @@ Supplementary Figure 4
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_4.jpg" width = "400">
 
 * [Pre_Supplementary_Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure4.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure4.rmd): process summarized file and generate Supplementary Figure 4.
+* [Supplementary_Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure4.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 4.
 
 Supplementary Figure 5
 ----------------------
@@ -165,7 +165,7 @@ Supplementary Figure 5
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_5.jpg" width = "400">
 
 * [Pre_Supplementary_Figure5.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure5.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure5.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure5.rmd): process summarized file and generate Supplementary Figure 5.
+* [Supplementary_Figure5.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure5.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 5.
 
 Supplementary Figure 6
 ----------------------
@@ -173,7 +173,7 @@ Supplementary Figure 6
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_6.jpg" width = "400">
 
 * [Pre_Supplementary_Figure4.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure4.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure6.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure6.rmd): process summarized file and generate Supplementary Figure 6.
+* [Supplementary_Figure6.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure6.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 6.
 
 Supplementary Figure 7
 ----------------------
@@ -181,7 +181,7 @@ Supplementary Figure 7
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_7.jpg" width = "400">
 
 * [Pre_Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure7.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure7.rmd): process summarized file and generate Supplementary Figure 7.
+* [Supplementary_Figure7.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure7.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 7.
 
 Supplementary Figure 8
 ----------------------
@@ -189,7 +189,7 @@ Supplementary Figure 8
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_8.jpg" width = "400">
 
 * [Pre_Figure2.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure8.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure8.rmd): process summarized file and generate Supplementary Figure 8.
+* [Supplementary_Figure8.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure8.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 8.
 
 Supplementary Figure 9
 ----------------------
@@ -200,7 +200,7 @@ Supplementary Figure 9
 
 * [Pre_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): generates a matrix, connecting CpG-islands (and beta-values) to the nearest transcription start site (TSS) (and gene-expression values), which is uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3.rmd): populates the previously generated matrix with information about coverage, fragment-size and nucleosome positioning ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure9.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure9.rmd): process summarized file and generate Supplementary Figure 9.
+* [Supplementary_Figure9.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure9.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 9.
 
 
 Supplementary Figure 10
@@ -209,14 +209,14 @@ Supplementary Figure 10
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_10.jpg" width = "400">
 
 * [Pre_Supplementary_Figure10.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure10.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure10.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure10.rmd): process summarized file and generate Supplementary Figure 10.
+* [Supplementary_Figure10.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure10.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 10.
 
 Supplementary Figure 11
 -----------------------
 
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_11.jpg" width = "400">
 
-* [Supplementary_Figure11.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure11.rmd): process summarized file and generate Supplementary Figure 11.
+* [Supplementary_Figure11.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure11.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 11.
 
 Supplementary Figure 12
 ----------------------
@@ -225,7 +225,7 @@ Supplementary Figure 12
 
 * [Pre_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): generates a matrix, connecting CpG-islands (and beta-values) to the nearest transcription start site (TSS) (and gene-expression values), which is uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)).
 * [Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3.rmd): populates the previously generated matrix with information about coverage, fragment-size and nucleosome positioning ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure12.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure12.rmd): process summarized file and generate Supplementary Figure 12.
+* [Supplementary_Figure12.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure12.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 12.
 
 Supplementary Figure 13
 -----------------------
@@ -233,7 +233,7 @@ Supplementary Figure 13
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_13.jpg" width = "400">
 
 * [Pre_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)). 
-* [Supplementary_Figure13.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure13.rmd): process summarized file and generate Supplementary Figure 13.
+* [Supplementary_Figure13.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure13.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 13.
 
 Supplementary Figure 14
 -----------------------
@@ -243,7 +243,7 @@ Supplementary Figure 14
 
 * [Pre_Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): generates a matrix, connecting CpG-islands (and beta-values) to the nearest transcription start site (TSS) (and gene-expression values), which is uploaded to this repository ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Figure3.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Figure3.rmd): populates the previously generated matrix with information about coverage, fragment-size and nucleosome positioning ([data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure14.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure14.rmd): process summarized file and generate Supplementary Figure 14.
+* [Supplementary_Figure14.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure14.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 14.
 
 Supplementary Figure 15
 -----------------------
@@ -251,7 +251,7 @@ Supplementary Figure 15
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_15A.jpg" width = "400">
 <img src="https://github.com/michaelnoe/cfepigenetics/blob/main/output/Supplementary_Fig_15B.jpg" width = "400">
 
- [Supplementary_Figure15.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure15.rmd): process summarized file and generate Supplementary Figure 15.
+ [Supplementary_Figure15.rmd](https://github.com/michaelnoe/cfepigenetics/blob/main/analysis/Supplementary_Figure15.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 15.
 
 
 Session information
