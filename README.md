@@ -25,7 +25,7 @@ Table of contents
 * [Citation](#citation)
 * [Abstract](#abstract)
 * [Introduction](#introduction)
-* [Required data](#required-data)
+* [Available data used in analysis](#available-data-used-in-analysis)
 * [Pre-processing](#pre-processing)
 * [Figure 1](#figure-1)
 * [Figure 2](#figure-2)
@@ -53,8 +53,8 @@ The analyses explained in this file uses the data from previous studies (Christi
 
 For the analyses explained in this file, we will start from raw-data as saved in '.rds'-files containing GRanges-objects. In order to construct the plots in the paper, we often generate temporary files which are too big or too numerous to upload to the GitHub repository. These files will be store in a folder on the same level as the folder containing the repository (cfepigenetics), called 'cfepigenetics_data'. The temporary files stored there will be used as input for a summarizing script that will generate a final summary-file, which is small enough to store into the [data](https://github.com/michaelnoe/cfepigenetics/blob/main/data)-folder in this GitHub repository.
 
-Required data
--------------
+Available data used in analysis
+-------------------------------
 
 The data used in this study has been made publically available when published with previous studies.
 
