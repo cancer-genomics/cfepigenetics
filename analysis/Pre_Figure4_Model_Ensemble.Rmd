@@ -1,0 +1,220 @@
+---
+title: "Cristiano_Replicate"
+output: console
+---
+Read in Libraries
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(readxl)
+library(devtools)
+library(caret)
+library(recipes)
+library(pROC)
+```
+
+Import all data and format metadata
+```{r data_read}
+delfi<- read_csv("../data/Cristiano-training-set-full.csv") 
+meth<-readRDS("../data/carvalho_motifs_ML.rds")
+
+meth<-meth %>% filter(sample %in% delfi$id) #Need to get rid of some LUCAS and D/C healthies that are in here
+meth<-meth %>% filter(class_group=="CGPLH"|class_group=="CGPLPA")
+meth<-meth %>% dplyr::select(-class) %>% dplyr::rename("type"="class_group")
+meth<-meth %>% mutate(type=if_else(type=="CGPLH","healthy","cancer"))
+meth_reg <-meth %>% dplyr::select(sample,type,contains("regular"))
+
+data<-inner_join(delfi %>% dplyr::select(-type,-Tumor_Type),meth,by=c("id"="sample"))
+
+#delfi<-inner_join(delfi %>% select(-type,-Tumor_Type),meth %>% select(sample,type),by=c("id"="sample"))
+delfi<-delfi %>% dplyr::select(-Tumor_Type)
+
+```
+
+#Now work on the ensembles!
+#10 fold -- leave the test set out each time, you have to manually run it for each of 10 times (the 5 cells below)
+#fold01 - 09, fold10
+```{r}
+library(splitTools)
+set.seed(1234)
+train_folds<-create_folds(meth$type,k=10)
+
+train_IDs<-meth$sample[train_folds$Fold10] ###change this name 10 times (Fold01, Fold02, Fold03, ...)
+test_IDs<-meth$sample[-train_folds$Fold10] ###change this name 10 times (Fold01, Fold02, Fold03, ...)
+name<-"../data/fold10_ens.csv" ###change this name 10 times
+```
+
+#train meth GBM 5x1 on train set and save CV
+#train DELFI LR 5x1 on train set and save CV
+#Of note, we are spiking in the Cristiano cancers of other types as extra training data
+#use CV preds to train ensemble
+
+#predict DELFI and Meth on test set
+#predict ensemble on test set
+
+```{r}
+set.seed(1234)
+meth_data_train<-meth %>% filter(sample %in% train_IDs)
+meth_data_test<-meth %>% filter(sample %in% test_IDs)
+
+recipe_meth <- recipe(type ~ ., data=meth_data_train) %>%
+    update_role(sample, new_role = "ID") %>%
+    step_corr(all_predictors(), threshold=0.95) %>%
+    step_nzv(all_predictors())
+set.seed(1234)
+ctrl_meth <- trainControl(method = "repeatedcv",
+                     number = 5,
+                     repeats = 1,
+                     verboseIter = TRUE,
+                     savePredictions="final",
+                     classProbs=TRUE,
+                     index=createMultiFolds(meth_data_train$type, 5, 1),
+                     summaryFunction = twoClassSummary)
+
+set.seed(1234)
+model_meth <- caret::train(recipe_meth,
+                      data = meth_data_train,
+                      method = "gbm",
+                      trControl = ctrl_meth)
+
+##################
+set.seed(1234)
+meth_reg_data_train<-meth_reg %>% filter(sample %in% train_IDs)
+meth_reg_data_test<-meth_reg %>% filter(sample %in% test_IDs)
+
+recipe_meth_reg <- recipe(type ~ ., data=meth_reg_data_train) %>%
+    update_role(sample, new_role = "ID") %>%
+    step_corr(all_predictors(), threshold=0.95) %>%
+    step_nzv(all_predictors())
+set.seed(1234)
+ctrl_meth_reg <- trainControl(method = "repeatedcv",
+                     number = 5,
+                     repeats = 1,
+                     verboseIter = TRUE,
+                     savePredictions="final",
+                     classProbs=TRUE,
+                     index=createMultiFolds(meth_reg_data_train$type, 5, 1),
+                     summaryFunction = twoClassSummary)
+
+set.seed(1234)
+model_meth_reg <- caret::train(recipe_meth_reg,
+                      data = meth_reg_data_train,
+                      method = "gbm",
+                      trControl = ctrl_meth_reg)
+#############
+delfi_data_train<-delfi %>% filter(!id %in% test_IDs)
+delfi_data_test<-delfi %>% filter(id %in% test_IDs)
+
+recipe_delfi <- recipe(type ~ ., data=delfi_data_train) %>%
+    update_role(id, new_role = "ID") %>%
+    step_rm(starts_with("ratio"),starts_with("short")) %>%
+    step_pca(starts_with("cov"), prefix = "cov_pc_",  threshold=0.90)     %>%
+    step_corr(all_predictors(), threshold=0.95) %>%
+    step_nzv(all_predictors())
+
+glmnetGrid <- expand.grid(
+    alpha = 1,
+    lambda = 10^seq(-5, -1, length.out = 100))
+#### Train models
+set.seed(1234)
+ctrl_delfi <- trainControl(method = "repeatedcv",
+                     number = 5,
+                     repeats = 1,
+                     verboseIter = TRUE,
+                     savePredictions="final",
+                     classProbs=TRUE,
+                     index=createMultiFolds(delfi_data_train$type, 5, 1),
+                     summaryFunction = twoClassSummary)
+
+set.seed(1234)
+model_delfi <- caret::train(recipe_delfi,
+                          data = delfi_data_train,
+                          method = "glmnet",
+                          tuneGrid = glmnetGrid,
+                          trControl = ctrl_delfi)
+##########
+pred.all <- model_meth$pred
+pred.all <- pred.all %>% dplyr::group_by(rowIndex) %>% dplyr::summarize(score.meth = mean(cancer))
+all_data <- meth_data_train %>% dplyr::mutate(rowIndex = 1:n())
+labels <- all_data %>% dplyr::select(type,sample,rowIndex)
+preds_all <- dplyr::inner_join(labels, pred.all, by="rowIndex")
+
+pred.all <- model_meth_reg$pred
+pred.all <- pred.all %>% dplyr::group_by(rowIndex) %>% dplyr::summarize(score.meth_reg = mean(cancer))
+all_data <- meth_reg_data_train %>% dplyr::mutate(rowIndex = 1:n())
+labels <- all_data %>% dplyr::select(type,sample,rowIndex)
+preds_all_reg <- dplyr::inner_join(labels, pred.all, by="rowIndex")
+
+pred.all <- model_delfi$pred
+pred.all <- pred.all %>% dplyr::group_by(rowIndex) %>% dplyr::summarize(score.delfi = mean(cancer))
+all_data <- delfi_data_train %>% dplyr::mutate(rowIndex = 1:n())
+labels <- all_data %>% dplyr::select(id,rowIndex)
+preds <- dplyr::inner_join(labels, pred.all, by="rowIndex")
+
+preds_CV <- inner_join(preds_all,preds,by=c("sample"="id"))
+#colnames(preds_CV) <- sub("rowIndex.x", "rowIndex", colnames(preds_CV))
+preds_CV <- inner_join(preds_CV,preds_all_reg,by=c("sample", "type"))
+
+
+
+recipe_ens <- recipe(type ~ score.meth_reg + score.delfi, data=preds_CV)
+
+set.seed(1234)
+ctrl_ens <- trainControl(method = "repeatedcv",
+                     number = 5,
+                     repeats = 1,
+                     verboseIter = TRUE,
+                     savePredictions="final",
+                     classProbs=TRUE,
+                     index=createMultiFolds(preds_CV$type, 5, 1),
+                     summaryFunction = twoClassSummary)
+
+
+
+
+set.seed(1234)
+model_ens <- caret::train(recipe_ens,
+                          data = preds_CV,
+                          method = "glmnet",
+                          tuneGrid = glmnetGrid,
+                          trControl = ctrl_ens)
+#######
+#Delfi Preds
+delfi_preds<-predict(model_delfi,delfi_data_test,type="prob")$cancer
+meth_preds<-predict(model_meth,meth_data_test,type="prob")$cancer
+meth_reg_preds<-predict(model_meth_reg,meth_reg_data_test,type="prob")$cancer
+
+preds<-cbind(meth_data_test %>% dplyr::select(sample,type),meth_preds)
+preds_reg<-cbind(meth_reg_data_test %>% dplyr::select(sample,type),meth_reg_preds)
+preds2<-cbind(delfi_data_test %>% dplyr::select(id),delfi_preds)
+preds<-inner_join(preds,preds2,by=c("sample"="id"))
+preds<-inner_join(preds,preds_reg,by=c("sample", "type"))
+preds<-preds %>% dplyr::rename(score.delfi=delfi_preds) %>% dplyr::rename(score.meth=meth_preds) %>% dplyr::rename(score.meth_reg=meth_reg_preds)
+ens_preds<-predict(model_ens,preds,type="prob")$cancer
+
+preds<-cbind(preds,ens_preds)
+
+write.csv(preds,name)
+
+```
+
+
+
+After you have generated all 10 folds above!!!!
+Read all the results
+```{r}
+data <- list.files(path="../data",pattern="fold*", full.names = TRUE) %>% 
+  lapply(read_csv) %>% 
+  bind_rows 
+
+write.csv(data,"../data/All_Scores.csv")
+```
+
+
+
+
+
+

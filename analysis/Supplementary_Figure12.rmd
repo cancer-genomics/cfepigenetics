@@ -1,0 +1,216 @@
+---
+title: "Supplementary_Figure12.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 12.
+
+```{r}
+library("GenomicRanges")
+library("ggplot2")
+library("tidyverse")
+library("cowplot")
+```
+
+
+## Supplementary Figure 12A
+
+```{r}
+t <- readRDS("../data/tss_cpg_connect_filled.rds")
+t <- t[complete.cases(t),]
+t$group <- "NA"
+t$group2 <- "NA"
+t_1000exp <- t[order(-t$rna),][c(1:1000),]
+t_1000exp$group <- "High\nexpression"
+t_1000exp$group2 <- "All genes"
+t_1000unexp <- t[order(t$rna),][c(1:1000),]
+t_1000unexp$group <- "Low\nexpression"
+t_1000unexp$group2 <- "All genes"
+t_1000exp_meth <- t[which(t$beta >= 0.7),][order(-t[which(t$beta >= 0.7),]$rna),][c(1:1000),]
+t_1000exp_meth$group <- "High\nexpression"
+t_1000exp_meth$group2 <- "Methylated genes"
+t_1000unexp_meth <- t[which(t$beta >= 0.7),][order(t[which(t$beta >= 0.7),]$rna),][c(1:1000),]
+t_1000unexp_meth$group <- "Low\nexpression"
+t_1000unexp_meth$group2 <- "Methylated genes"
+t_1000exp_unmeth <- t[which(t$beta <= 0.3),][order(-t[which(t$beta <= 0.3),]$rna),][c(1:1000),]
+t_1000exp_unmeth$group <- "High\nexpression"
+t_1000exp_unmeth$group2 <- "Unmethylated genes"
+t_1000unexp_unmeth <- t[which(t$beta <= 0.3),][order(t[which(t$beta <= 0.3),]$rna),][c(1:1000),]
+t_1000unexp_unmeth$group <- "Low\nexpression"
+t_1000unexp_unmeth$group2 <- "Unmethylated genes"
+
+t_cov <- rbind(t_1000exp, t_1000unexp,
+               t_1000exp_meth, t_1000unexp_meth,
+               t_1000exp_unmeth, t_1000unexp_unmeth)
+t_cov$group2 <- factor(t_cov$group2, levels = c("All genes", "Unmethylated genes", "Methylated genes"))
+
+alg <- ggplot(t_cov, aes(y=cov, x=group, fill=group)) +
+  geom_jitter(size=0.4, alpha=1, width = 0.1, aes(colour=group)) +
+  geom_boxplot(outlier.shape = NA, width = 0.2, aes(alpha = 0.1)) +
+  facet_wrap(.~group2,scales='free') +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(),
+        text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(r = 20, l = 20)),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        plot.title = element_text(hjust = 0.5,  size=16)) +
+  scale_fill_manual(values = c("#77dd77", "#00660a")) +
+  scale_color_manual(values = c("#77dd77", "#00660a")) +
+  scale_y_continuous(limits = c(0,2000)) +
+  xlab("") +
+  ylab(paste0("cumulative cfDNA coverage\naround transcription start sites"))
+```
+
+
+## Supplementary Figure 12B
+
+```{r}
+he <- readRDS("../data/Moss_ratios.rds")
+hegr <- GRanges(paste0(he$chr, ":", he$pos))
+hegr$beta <- he$beta
+hegr$ratio <- (he$start_cg + he$end_cg) / (he$start_cg_over + he$end_cg_over)
+hegr <- hegr[which(seqnames(hegr) %in% paste0("chr", c(1:22)))]
+hegr <- hegr[order(hegr$beta)]
+hegr$beta_group <- c(1:length(hegr)) / length(hegr)
+hegr$beta_group <- round((hegr$beta_group + 0.05) * 10)
+
+
+tss <- read.table(file = "../data/transcriptAnno-GRCh37.75.tsv")
+tss <- tss[which(tss$V2 %in% c(1:22)),]
+tss$V2 <- paste0("chr", tss$V2)
+tissue_key <- read.table("../data/tissue_key.tsv",as.is=T,header=T,sep="\t",quote="\"")
+conv <- read.table('../data/labels.txt',as.is=T,header=T,sep="\t",quote="\"")
+rna <- read.table('../data/RNAtable.tsv.gz',as.is=T,header=T)
+express <- conv[which(conv$Category %in% c("Myeloid")),]$RName
+express_df <- rna[c("GeneID", express)]
+express_df$mean <- rowMeans(express_df[,c(2:(length(express) + 1))], na.rm=T)
+express_df <- express_df[order(-express_df$mean),]
+tssgr <- GRanges(paste0(tss$V2, ":", tss$V3, "-", tss$V4, ":", tss$V5))
+tssgr$ensembl <- tss$V1
+tssgr$rna <- 0
+tssgr$rna <- express_df[match(tssgr$ensembl, express_df$GeneID),]$mean
+
+hegr$rna <- NA
+hegr$rna <- tssgr[nearest(hegr, tssgr)]$rna
+hegr <- hegr[order(hegr$rna)]
+hegr$rna_group <- c(1:length(hegr)) / length(hegr)
+hegr$rna_group <- round((hegr$rna_group + 0.05) * 10)
+
+he <- as_tibble(as.data.frame(hegr))
+he <- he[complete.cases(he),]
+
+he_meth <- he %>%
+  group_by(beta_group) %>%
+  summarise(ratio = mean(ratio), beta = mean(beta), rna = mean(rna))
+ggmeth_ratio <- ggplot(he_meth, aes(x=beta_group, y=ratio)) +
+  geom_bar(stat="identity", aes(fill=beta_group)) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_y_continuous(name = "Fraction of cfDNA fragments\nstarting or ending at CGs", limits = c(0,0.009)) +
+  scale_fill_gradient(low="#77dd77", high="#00660a")
+
+ggmeth_meth <- ggplot(he_meth, aes(x=beta_group, y=beta)) +
+  geom_bar(stat="identity", aes(fill=beta_group)) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_y_continuous(name = "Methylation (beta-value)", limits = c(0,1)) +
+  scale_fill_gradient(low="#77C8DD", high="#004766")
+
+ggmeth_rna <- ggplot(he_meth, aes(x=beta_group, y=rna)) +
+  geom_bar(stat="identity", aes(fill=beta_group)) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 20))) +
+  scale_y_continuous(name = "Gene expression (TPM)", limits = c(0,150)) +
+  scale_fill_gradient(low="#77C8DD", high="#004766") +
+  xlab("order by methylation")
+ggmeth_rna
+
+he_rna <- he %>%
+  group_by(rna_group) %>%
+  summarise(ratio = mean(ratio), beta = mean(beta), rna = mean(rna))
+
+
+ggrna_ratio <- ggplot(he_rna, aes(x=rna_group, y=ratio)) +
+  geom_bar(stat="identity", aes(fill=rna_group)) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_y_continuous(name = "Fraction of cfDNA fragments\nstarting or ending at CGs", limits = c(0,0.009)) +
+  scale_fill_gradient(low="#77dd77", high="#00660a")
+
+ggrna_meth <- ggplot(he_rna, aes(x=rna_group, y=beta)) +
+  geom_bar(stat="identity", aes(fill=rna_group)) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_y_continuous(name = "Methylation (beta-value)", limits = c(0,1)) +
+  scale_fill_gradient(low="#77C8DD", high="#004766")
+
+ggrna_rna <- ggplot(he_rna, aes(x=rna_group, y=rna)) +
+  geom_bar(stat="identity", aes(fill=rna_group)) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 20))) +
+  scale_y_continuous(name = "Gene expression (TPM)", limits = c(0,150)) +
+  scale_fill_gradient(low="#77C8DD", high="#004766") +
+  xlab("order by expression")
+
+plot_meth <- plot_grid(ggmeth_ratio, ggmeth_meth, ggmeth_rna , ncol=1, nrow=3, rel_heights = c(1,1,1.2), align = "v")
+plot_rna <- plot_grid(ggrna_ratio, ggrna_meth, ggrna_rna, ncol=1, nrow=3, rel_heights = c(1,1,1.2), align = "v")
+plot <- plot_grid(plot_meth, plot_rna, ncol=2, rel_widths= c(1,1), align="h", labels=c("",""), label_size = 20)
+``` 
+
+
+## 
+
+```{r}
+combi <- plot_grid(alg, plot, ncol=2, rel_widths=c(1,1), align="hv", labels=c("a","b"), label_size = 20)
+ggsave("../output/Supplementary_Fig_12.jpg", plot = combi, device = "jpeg",width = 20, height=12,units = "in", dpi=600, scale = 1.2)
+```
+
+

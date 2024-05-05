@@ -1,0 +1,40 @@
+---
+title: "Supplementary_Figure1.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 1.
+
+```{r}
+library("ggplot2")
+```
+
+
+## Supplementary Figure 1: 
+
+```{r}
+loc <- "../data/motifs_cfdna_144_167.rds"
+t <- readRDS(loc)
+t1_144 <- t[which((t$group == "seq144") & (t$motif_length == 1)),]
+t1_144$pos <-  t1_144$pos - 10
+t1_144[which(t1_144$pos >= 0),]$pos <- t1_144[which(t1_144$pos >= 0),]$pos + 1
+t1_144[which(t1_144$pos >= 145),]$pos <- t1_144[which(t1_144$pos >= 145),]$pos + 1
+t1_144 <- t1_144 %>%
+  group_by(pos) %>%
+  mutate(relFreq = Freq / sum(Freq))
+plot <- ggplot(t1_144, aes(x=pos,y=relFreq, fill=Var1)) +
+  geom_bar(stat = "identity") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l=20)),
+        axis.title.x = element_text(margin = margin(t = 20, b=20))) +
+  scale_fill_manual(values = c("#77C8DD", "#004766", "#77dd77", "#00660a")) +
+  scale_x_continuous(breaks = c(1,144), name = "Position in the cfDNA fragment") +
+  scale_y_continuous(name = "Relative frequency")
+ggsave("../output/Supplementary_Fig_1.jpg", plot = plot, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+```

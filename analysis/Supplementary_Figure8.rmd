@@ -1,0 +1,361 @@
+---
+title: "Supplementary_Figure8.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 8.
+
+```{r}
+library("ggplot2")
+library("tidyverse")
+library("cowplot")
+library("gridExtra")
+library("ggpubr")
+```
+
+
+## Supplementary Figure 8
+
+```{r}
+sum <- readRDS("../data/som_chrx.rds")
+sum$group <- sub("open sea", "Open sea", sum$group)
+sum$group <- sub("islands", "Islands", sum$group)
+sum$group <- sub("shores", "Shores", sum$group)
+sum$group <- sub("shelves", "Shelves", sum$group)
+sum$group <- factor(sum$group, levels=c("Islands", "Shores", "Shelves", "Open sea"))
+sum[which(nchar(sum$motif) == 4),]$motif <- sub("CCG", " | CCG", sum[which(nchar(sum$motif) == 4),]$motif)
+sum[which(nchar(sum$motif) == 3),]$motif <- sub("CG", " | CG", sum[which(nchar(sum$motif) == 3),]$motif)
+sum$motif <- factor(sum$motif, levels=c("C | CCG", "G | CCG", "A | CCG", "T | CCG", "C | CG", "G | CG", "A | CG", "T | CG"))
+sum$sex <- NA
+sum[which(sum$rel_chrx <= 0.04),]$sex <- "male"
+sum[which(sum$rel_chrx >= 0.04),]$sex <- "female"
+sum$sex <- factor(sum$sex, levels = c("male", "female"))
+
+plot1_shores_chrx <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "Shores") & (sum$chromosome == "chrX")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.01),
+                     breaks=c(0.01,0.0075,0.005,0.0025,0)) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+
+plot2_shores_chrx <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "Shores") & (sum$chromosome == "chrX")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.0125,0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0125)) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot1_shores_auto <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "Shores") & (sum$chromosome == "somatic")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.01),
+                     breaks=c(0.01,0.0075,0.005,0.0025,0)) +
+  #ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.y.left = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+
+plot2_shores_auto <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "Shores") & (sum$chromosome == "somatic")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.0125,0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0125)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        axis.text.y.left = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot1_shelves_chrx <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "Shelves") & (sum$chromosome == "chrX")) ,], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.01),
+                     breaks=c(0.01,0.0075,0.005,0.0025,0)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot2_shelves_chrx <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "Shelves") & (sum$chromosome == "chrX")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.0125,0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0125)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot1_shelves_auto <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "Shelves") & (sum$chromosome == "somatic")) ,], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.01),
+                     breaks=c(0.01,0.0075,0.005,0.0025,0)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.text.y.left = element_blank(),
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot2_shelves_auto <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "Shelves") & (sum$chromosome == "somatic")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.0125,0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0125)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.text.y.left = element_blank(),
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot1_inter_chrx <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "Open sea") & (sum$chromosome == "chrX")) ,], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.01),
+                     breaks=c(0.01,0.0075,0.005,0.0025,0)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot2_inter_chrx <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "Open sea") & (sum$chromosome == "chrX")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.0125,0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0125)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot1_inter_auto <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "Open sea") & (sum$chromosome == "somatic")) ,], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.01),
+                     breaks=c(0.01,0.0075,0.005,0.0025,0)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        axis.text.y.left = element_blank(),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot2_inter_auto <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "Open sea") & (sum$chromosome == "somatic")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.0125,0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0125)) +
+  #ylab("Fraction of chrX cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        axis.text.y.left = element_blank(),
+        legend.position = "none",
+        #axis.title.y = element_text(margin = margin(r = 20, l = 20))
+        ) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+title_chrx_left <- ggdraw() + 
+  draw_label(
+    "Chromosome X",
+    size = 13,
+    hjust = -0.15,
+    vjust = 2
+  )
+title_chrx <- ggdraw() + 
+  draw_label(
+    "Chromosome X",
+    size = 13,
+    hjust = 0.25,
+    vjust = 2
+  )
+title_auto <- ggdraw() + 
+  draw_label(
+    "Autosomes",
+    size = 13,
+    hjust = 0.4,
+    vjust = 2
+  ) 
+plot_shores_chrx <- cowplot::plot_grid(title_chrx_left, plot2_shores_chrx, plot1_shores_chrx, ncol=1, align="hv", axis = "bt", rel_heights = c(0.1, 1.1, 1.1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+plot_shores_auto <- cowplot::plot_grid(title_auto, plot2_shores_auto, plot1_shores_auto, ncol=1, align="hv", axis = "bt", rel_heights = c(0.1, 1.1, 1.1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+plot_shores <- cowplot::plot_grid(plot_shores_chrx, plot_shores_auto, ncol=2, align="hv", axis = "bt", rel_widths = c(1.2,0.85)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+title_shores <- ggdraw() + 
+  draw_label(
+    "Shores",
+    size = 16,
+    hjust = -0.7,
+    vjust = 0
+  ) 
+plot_shores <- cowplot::plot_grid(title_shores, plot_shores, nrow=2, rel_heights = c(0.05,1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+
+plot_shelves_chrx <- cowplot::plot_grid(title_chrx, plot2_shelves_chrx, plot1_shelves_chrx, ncol=1, align="hv", axis = "bt", rel_heights = c(0.1, 1.1, 1.1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+plot_shelves_auto <- cowplot::plot_grid(title_auto, plot2_shelves_auto, plot1_shelves_auto, ncol=1, align="hv", axis = "bt", rel_heights = c(0.1, 1.1, 1.1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+plot_shelves <- cowplot::plot_grid(plot_shelves_chrx, plot_shelves_auto, ncol=2, align="hv", axis = "bt", rel_widths = c(1.2,1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+title_shelves <- ggdraw() + 
+  draw_label(
+    "Shelves",
+    size = 16,
+    hjust = 0,
+    vjust = 0
+  ) 
+plot_shelves <- cowplot::plot_grid(title_shelves, plot_shelves, nrow=2, rel_heights = c(0.05,1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+
+
+plot_inter_chrx <- cowplot::plot_grid(title_chrx, plot2_inter_chrx, plot1_inter_chrx, ncol=1, align="hv", axis = "bt", rel_heights = c(0.1, 1.1, 1.1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+plot_inter_auto <- cowplot::plot_grid(title_auto, plot2_inter_auto, plot1_inter_auto, ncol=1, align="hv", axis = "bt", rel_heights = c(0.1, 1.1, 1.1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+plot_inter <- cowplot::plot_grid(plot_inter_chrx, plot_inter_auto, ncol=2, align="hv", axis = "bt", rel_widths = c(1.2,1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+title_inter <- ggdraw() + 
+  draw_label(
+    "Open sea",
+    size = 16,
+    hjust = 0,
+    vjust = 0
+  ) 
+plot_inter <- cowplot::plot_grid(title_inter, plot_inter, nrow=2, rel_heights = c(0.05,1)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+
+plot <-  cowplot::plot_grid(plot_shores, plot_shelves, plot_inter, nrow=1, align="hv", rel_widths  = c(1.2, 1.06, 1.06)) + theme(plot.background = element_rect(fill = "white", colour = NA))
+
+ggsave(paste("../output/Supplementary_Fig_8.jpg"), plot = plot, device = "jpeg",width = 25, height=12,units = "in", dpi=300)
+
+```
+

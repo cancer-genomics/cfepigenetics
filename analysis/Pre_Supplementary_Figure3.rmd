@@ -1,0 +1,51 @@
+---
+title: "Supplementary_Figure3.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/diff_startfrags_3bp")
+dir.create("../../cfepigenetics_data/diff_startfrags_4bp")
+```
+
+
+## Process the data
+
+*analysis/code/diff_startfrags_3bp.sh* -> outputs "../../cfepigenetics_data/diff_startfrags_3bp"
+    Collect information on fragments starting and ending around motifs with a methylated or unmethylated CpG. This script is focused on 3bp-motifs.
+*analysis/code/diff_startfrags_4bp.sh* -> outputs "../../cfepigenetics_data/diff_startfrags_4bp"
+    Collect information on fragments starting and ending around motifs with a methylated or unmethylated CpG. This script is focused on 4bp-motifs.  
+
+
+## Pre-requisites
+
+These packages are necessary to make the data-structure that are necessary to make Supplementary Figure 3.
+
+```{r}
+```
+
+
+## Construct files with metrics of fragment starting and ending around motifs
+
+```{r}
+ls <- list.files("../../cfepigenetics_data/diff_startfrags_3bp", full.names = T)
+m <- matrix(0,16,51)
+for (f in ls) {
+  print(basename(f))
+  temp <- readRDS(f)
+  m <- m + temp
+}
+saveRDS(m, "../data/diff_startfrags_3bp.rds")
+
+ls <- list.files("../../cfepigenetics_data/diff_startfrags_4bp", full.names = T)
+m <- matrix(0,16,51)
+for (f in ls) {
+  print(basename(f))
+  temp <- readRDS(f)
+  m <- m + temp
+}
+saveRDS(m, "../data/diff_startfrags_4bp.rds")
+```

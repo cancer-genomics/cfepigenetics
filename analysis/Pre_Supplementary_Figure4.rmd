@@ -1,0 +1,100 @@
+---
+title: "Supplementary_Figure4.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/Loyfer_combined")
+```
+
+## Process the data from the Loyfer et al. 
+
+Download and extract the data (from command line in the newly created directory)
+
+`wget ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE186nnn/GSE186458/suppl/GSE186458_RAW.tar`
+`tar -xvf GSE186458_RAW.tar`
+
+Install wgbs_tools
+
+`git clone https://github.com/nloyfer/wgbs_tools.git`
+`cd wgbs_tools`
+`python setup.py`
+`wgbstools init_genome hg19`
+
+Process the files
+
+```{r}
+t <- read.table("wgbs_tools/references/hg19/CpG.bed.gz")
+loc <- "GSE186458_RAW/"
+ls <- list.files(loc)
+ls <- ls[-grep("hg38", ls)]
+
+lscfdna <- ls[grep("cfDNA",ls)]
+lscfdna <- lscfdna[grep(".beta", lscfdna)]
+c <- c()
+m <- matrix(0, nrow=28217448, ncol=2)
+for (file in lscfdna) {
+  print(file)
+  fname <- file.path(loc, file)
+  N <- file.info(fname)$size
+  content <- matrix(readBin(fname, "integer", N, size = 1, signed = FALSE), N / 2, 2, byrow=TRUE)
+  print(length(which(content[,2] > 10)) / nrow(content))
+  print(mean(content[,2]))
+  c <- c(c, mean(content[,2]))
+  m <- m + content
+}
+included <- which(m[,2] >= 750)
+t <- t[included,]
+m <- m[included,]
+included <- which(t$V1 %in% paste0("chr", c(1:22)))
+t <- t[included,]
+m <- m[included,]
+m_df <- data.frame(m)
+colnames(m_df) <- c("meth", "all")
+m_df$index <- t$V3
+m_df_small <- m_df
+m_df_small$beta  <- m_df_small$meth / m_df_small$all
+m_df_small <- m_df_small[,c(3,4)]
+q <- nrow(m_df_small)
+q / 3
+saveRDS(m_df_small[c(1:round(q/3, digits = 0)),], file = '../data/CpG_Loyfer_1-3.rds')
+saveRDS(m_df_small[c(round((q/3)+ 1, digits = 0) : round((2*q/3), digits = 0)),], file = '../data/CpG_Loyfer_2-3.rds')
+saveRDS(m_df_small[c(round((2*q/3)+1, digits = 0) : q),], file = '../data/CpG_Loyfer_3-3.rds')
+```
+
+## Process the data
+
+  *analysis/code/Loyfer_combined.sh* -> outputs "../../../cfepigenetics_data/Loyfer_combined"
+    Extracts per case the amount of fragments starting at and around the CpGs in the Loyfer data
+  
+
+## Combine the data from the different cases, overlapping the Loyfer data
+
+```{r}
+loc <- "../../cfepigenetics_data/Loyfer_combined"
+ls <- list.files(loc)
+t <- tibble()
+annots <- c('hg19_cpgs')
+annots <- build_annotations(genome = 'hg19', annotations = annots)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(loc, file))
+  temp$beta <- round(temp$beta, digits =2)
+  temp <- temp[which(temp$seq %in% c("ACG", "CCG", "GCG", "TCG", "ACCG", "CCCG", "GCCG", "TCCG")),]
+  temp_gr <- GRanges(temp$pos)
+  o <- as_tibble(as.data.frame(findOverlaps(temp_gr, annots)))
+  temp$group <- "NA"
+  temp[o$queryHits,]$group <- annots[o$subjectHits]$type
+  temp <- temp %>%
+    group_by(seq, beta, group) %>%
+    summarise(start= sum(start), over = sum(over), ratio = sum(start)/sum(over))
+  t <- rbind(t, temp)
+}
+t <-t %>%
+  group_by(seq, beta, group) %>% 
+  summarise(start= sum(start), over = sum(over), ratio = sum(start)/sum(over))
+saveRDS(t, "../data/Loyfer_50_ratios.rds")
+```

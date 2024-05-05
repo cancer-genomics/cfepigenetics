@@ -1,0 +1,352 @@
+---
+title: "Supplementary_Figure13.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 13.
+
+```{r}
+library("reshape2")
+library("ggplot2")
+library("cowplot")
+library("tidyverse")
+library("dplyr")
+library("GenomicRanges")
+```
+
+
+## Supplementary Figure 13A: CpG-islands WPS (mononucleosomal reads)
+
+```{r}
+colorz <- c("#DD6627", "#77C8DD", "#004766")
+matrix <- readRDS("../data/cpg_wps_smallfragments.rds")
+cpg <- readRDS("../data/cpgIslands.hg19.20001.rds")
+geneid_ordered <- order(cpg$beta)
+cpg <- cpg[geneid_ordered]
+remove <- which(cpg$amount <=2)
+cpg <- cpg[-remove]
+tracker <- tibble("index" = c(1:nrow(matrix)))
+tracker <- tracker[-remove,]
+
+matrix_ordered <- matrix
+matrix_ordered <- matrix_ordered[-remove,]
+
+included_genes <- which(rowSums(is.na(matrix_ordered)) <= 10)
+tracker <- tracker[included_genes,]
+cpg <- cpg[included_genes]
+matrix_ordered <- matrix_ordered[which(rowSums(is.na(matrix_ordered)) <= 10),]
+matrix_ordered_long <- melt(matrix_ordered)
+colnames(matrix_ordered_long) <- c("gene_index", "relative_position", "wps")
+matrix_ordered_long[which(matrix_ordered_long$relative_position <= 250),]$relative_position <- matrix_ordered_long[which(matrix_ordered_long$relative_position <= 250),]$relative_position - 251
+matrix_ordered_long[which(matrix_ordered_long$relative_position > 250),]$relative_position <- matrix_ordered_long[which(matrix_ordered_long$relative_position > 250),]$relative_position - 250
+matrix_ordered_long$relative_position <- matrix_ordered_long$relative_position * 10
+matrix_ordered_long$gene_index <- matrix_ordered_long$gene_index * -1
+matrix_ordered_long$gene_index <- matrix_ordered_long$gene_index - min(matrix_ordered_long$gene_index) +1
+m <- as_tibble(matrix_ordered_long) %>%
+    pivot_wider(id_cols=gene_index,
+                names_from=relative_position,
+                values_from=wps)
+m2 <- m %>% 
+  dplyr::select(-gene_index) %>%
+  as.matrix()
+sfun <- function(x, k){
+    s <- runmean(Rle(x), k, endrule="constant")
+    as.numeric(s)
+}
+m3 <- apply(m2, 2, sfun, k=5)
+m[, -1] <- m3
+x2 <- m %>%
+    pivot_longer(cols=-1, names_to="relative_position",
+                 values_to="wps") %>%
+    mutate(relative_position=as.integer(relative_position))  %>%
+    mutate(method="smoothed")
+pos <- sort(c(seq(-2500, 2500, 1000), -10))
+brks <- match(pos, sort(unique(x2$relative_position)))
+pos[pos == -10] <- 0
+downsample <- sample(unique(x2$gene_index), 1000)
+downsample <- unique(x2$gene_index)
+width <- unit(10, "cm")
+x2[which(is.na(x2$wps)),]$wps <- mean(x2[-which(is.na(x2$wps)),]$wps)
+#tibfinal <- tibble()
+#for(i in unique(x2$relative_position)) {
+#  tib <- tibble("diff" = (mean(x2[which(x2$relative_position %in% c(i)),][c(1:1000),]$wps) - mean(x2[which(x2$relative_position %in% c(i)),][c((length(unique(x2$gene_index))-1000):(length(unique(x2$gene_index)))),]$wps)),
+#         "pos" = i)
+#  tibfinal <- rbind(tibfinal, tib)
+#}
+p1 <- x2[which(x2$gene_index %in% downsample),] %>%
+    mutate(wps=ifelse(wps > 250, 250, wps),
+           wps=ifelse(wps < -250, -250, wps),
+           gene_index=as.integer(factor(gene_index)),
+           x=as.integer(factor(relative_position))) %>%
+    ggplot(aes(x, gene_index)) +
+    geom_tile(aes(fill=wps), size=0) +
+    scale_fill_gradientn(colours = c("#004766", "#77C8DD", "#DD6627")) +
+    scale_x_continuous(breaks=brks,
+                       labels=pos, 
+                       expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(x="Position relative to the middle of the CpG-island") +
+    theme_classic(base_size=10) +
+    theme(text = element_text(size=20),
+          plot.title=element_blank(),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+          axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position="bottom",
+          legend.box="horizontal",
+          legend.spacing.x = unit(0, "cm"),
+          legend.key.width = unit(0.217, "snpc"),
+          plot.margin = margin(0,0.7,0.7,0.7, "cm")) + 
+  guides(fill = guide_colourbar(title.position="bottom", title.hjust = 0.5, title.vjust = 3, barheight = 0.5, frame.colour = "black", frame.linewidth = 0.5, title="cfDNA nucleosomal positioning score"))
+values <- data.frame("var_x" = 1,
+                     "var_y" = max(matrix_ordered_long$gene_index):1,
+                     "value" = cpg$beta)
+
+values$value <- as.numeric(values$value)
+p2 <- ggplot(values, aes(x = var_y, y = value)) +
+  geom_bar(stat="identity", fill = "black") +
+  labs(x="CpG-islands in order of methylation (beta-value)", y="", title="") +
+  theme_classic(base_size=10) + 
+  theme(text = element_text(size=20),
+        axis.title.y.right =  element_text(angle=90, vjust = 2),
+        axis.line.x.bottom = element_blank(),
+        axis.line.y.right = element_blank(),
+        plot.title=element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.ticks.x.bottom = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        legend.position="bottom",
+        plot.margin = margin(0,0,0,0, "cm")) + 
+  coord_flip() +
+  guides(x.sec = "axis", y.sec = "axis") +
+  scale_y_continuous(expand=c(0,0), limits = c(0, 1), breaks = seq(0, 1, by=1), labels=c("0.000000" = "0", "1" = "1")) +
+  scale_x_continuous(expand=c(0,0), position = "top")
+
+
+p3 <- x2[which(x2$gene_index %in% downsample),] %>%
+  group_by(relative_position) %>%
+  summarise(nwps = sum(wps)) %>%
+  ggplot(aes(relative_position, nwps)) +
+  labs(x="", y="", title="Cumulative cfDNA nucleosomal positioning score") +
+  geom_line() +
+  theme_classic(base_size=10) +
+  theme(text = element_text(size=20),
+        #axis.title.x.bottom = element_text(angle=0, vjust = 10),
+        plot.title=element_text(hjust=0.5, vjust=0, size = 16),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position="bottom",
+        legend.box="horizontal",
+        legend.spacing.x = unit(0, "cm"),
+        plot.margin = margin(0.2,0.7,0,0.7, "cm")) +
+  scale_x_continuous(breaks=brks,
+                       labels=pos, 
+                       expand = c(0,0)) +
+  ggtitle("Cumulative cfDNA nucleosomal positioning score")
+
+
+p1_legend <- get_legend(p1)
+p1 <- p1 + theme(legend.position='none')
+#p2_legend <- get_legend(p2)
+#p2 <- p2 + theme(legend.position='none')
+#plot_combi <- plot_grid(plot_grid(p1, p2, ncol=2, nrow=1,align = "h", rel_widths = c(10,2)),
+#          plot_grid(NULL, p1_legend, p2_legend, NULL, ncol = 1, nrow = 4, align="v", axis="b"), #rel_widths = c(10,1))
+plot_combi1 <- plot_grid(p3, NULL, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi2 <- plot_grid(p1, p2, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi3 <- plot_grid(p1_legend, NULL, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi_cpg_wps <- plot_grid(plot_combi1, plot_combi2, plot_combi3, NULL, ncol=1, rel_heights = c(2,15,1,0.5))
+title <- ggdraw() + 
+  draw_label(
+    "Nucleosome positioning over CpG-islands",
+    hjust = 0.5,
+    size = 20
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(0, 0, 0, 7)
+  )
+title <- plot_grid(title, NULL, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi_cpg_wps_title <- plot_grid(title, plot_combi_cpg_wps, ncol = 1, rel_heights = c(1,15))
+```
+
+
+## Supplementary Figure 13B: TSS WPS (mononucleosomal reads)
+
+```{r}
+matrix <- readRDS("../data/tss_wps_smallfragments.rds")
+tissue_key <- read.table("../data/tissue_key.tsv",as.is=T,header=T,sep="\t",quote="\"")
+conv <- read.table('../data/labels.txt',as.is=T,header=T,sep="\t",quote="\"")
+rna <- read.table('../data/RNAtable.tsv.gz',as.is=T,header=T)
+express <- conv[which(conv$Category %in% c("Myeloid")),]$RName
+express_df <- rna[c("GeneID", express)]
+express_df$mean <- rowMeans(express_df[,c(2:(length(express) + 1))], na.rm=T)
+express_df <- express_df[order(-express_df$mean),]
+geneid_ordered <- express_df$GeneID
+
+tss <- read.table(file = "../data/transcriptAnno-GRCh37.75.tss20001.tsv")
+colnames(tss) <- c("transcript", "seqnames", "start", "end", "strand")
+tss$seqnames <- paste0("chr", tss$seqnames)
+tss_gr <- GRanges(tss)
+tss_gr <- tss_gr[which(seqnames(tss_gr) %in% paste0("chr", c(1:22)))]
+seqlevels(tss_gr) <- paste0("chr", c(1:22))
+
+order <- match(geneid_ordered, tss_gr$transcript)
+order <- order [!is.na(order)]
+#matrix_ordered <- matrix[order,]
+matrix_ordered <- matrix
+included_genes <- tss_gr[order]$transcript
+included_genes <- included_genes[which(rowSums(matrix_ordered) <= 22500)]
+matrix_ordered <- matrix_ordered[which(rowSums(matrix_ordered) <= 22500),]
+
+matrix_ordered_long <- melt(matrix_ordered)
+colnames(matrix_ordered_long) <- c("gene_index", "relative_position", "wps")
+matrix_ordered_long[which(matrix_ordered_long$relative_position <= 250),]$relative_position <- matrix_ordered_long[which(matrix_ordered_long$relative_position <= 250),]$relative_position - 251
+matrix_ordered_long[which(matrix_ordered_long$relative_position > 250),]$relative_position <- matrix_ordered_long[which(matrix_ordered_long$relative_position > 250),]$relative_position - 250
+matrix_ordered_long$relative_position <- matrix_ordered_long$relative_position * 10
+matrix_ordered_long$gene_index <- matrix_ordered_long$gene_index * -1
+matrix_ordered_long$gene_index <- matrix_ordered_long$gene_index - min(matrix_ordered_long$gene_index) +1
+m <- as_tibble(matrix_ordered_long) %>%
+    pivot_wider(id_cols=gene_index,
+                names_from=relative_position,
+                values_from=wps)
+m2 <- m %>% 
+  dplyr::select(-gene_index) %>%
+  as.matrix()
+sfun <- function(x, k){
+    s <- runmean(Rle(x), k, endrule="constant")
+    as.numeric(s)
+}
+m3 <- apply(m2, 2, sfun, k=5)
+m[, -1] <- m3
+x2 <- m %>%
+    pivot_longer(cols=-1, names_to="relative_position",
+                 values_to="wps") %>%
+    mutate(relative_position=as.integer(relative_position))  %>%
+    mutate(method="smoothed")
+pos <- sort(c(seq(-2500, 2500, 1000), -10))
+brks <- match(pos, sort(unique(x2$relative_position)))
+pos[pos == -10] <- 0
+downsample <- sample(unique(x2$gene_index), 1000)
+downsample <- unique(x2$gene_index)
+width <- unit(10, "cm")
+p1 <- x2[which(x2$gene_index %in% downsample),] %>%
+#p1 <- x2 %>%
+    mutate(wps=ifelse(wps > 250, 250, wps),
+           wps=ifelse(wps < -250, 250, wps),
+           gene_index=as.integer(factor(gene_index)),
+           x=as.integer(factor(relative_position))) %>%
+    ggplot(aes(x, gene_index)) +
+    geom_tile(aes(fill=wps), size=0) +
+    scale_fill_gradientn(colours = c("#004766", "#77C8DD", "#DD6627")) +
+    scale_x_continuous(breaks=brks,
+                       labels=pos, 
+                       expand = c(0,0)) +
+    scale_y_continuous(expand = c(0,0)) +
+    labs(x="Position relative to TSS") +
+    theme_classic(base_size=10) +
+    theme(text = element_text(size=20),
+          plot.title=element_blank(),
+          panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+          axis.ticks.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.title.y = element_blank(),
+          legend.position="bottom",
+          legend.box="horizontal",
+          legend.spacing.x = unit(0, "cm"),
+          legend.key.width = unit(0.217, "snpc"),
+          plot.margin = margin(0,0.7,0.7,0.7, "cm")) + 
+  guides(fill = guide_colourbar(title.position="bottom", title.hjust = 0.5, title.vjust = 3, barheight = 0.5, frame.colour = "black", frame.linewidth = 0.5, title="cfDNA nucleosomal positioning score"))
+values <- data.frame("var_x" = 1,
+                     "var_y" = max(matrix_ordered_long$gene_index):1,
+                     "value" = express_df[which(express_df$GeneID %in% included_genes),]$mean,
+                     "gene" = express_df[which(express_df$GeneID %in% included_genes),]$GeneID)
+matrix_ordered_long$transcript_id <- values[match(matrix_ordered_long$gene_index, values$var_y),]$gene
+matrix_ordered_long$rna_expression <- values[match(matrix_ordered_long$gene_index, values$var_y),]$value
+#saveRDS(matrix_ordered_long, "/Users/mnoe/Documents/expression_coverage.rds")
+p2 <- ggplot(values[which(values$var_y %in% downsample),], aes(x = var_y, y = log(value + 1))) +
+  geom_bar(stat="identity", fill = "black") +
+  labs(x="Genes in order of expression (TPM)", y="", title="") +
+  theme_classic(base_size=10) + 
+  theme(text = element_text(size=20),
+        axis.title.y.right =  element_text(angle=90, vjust = 4),
+        axis.line.x.bottom = element_blank(),
+        axis.line.y.right = element_blank(),
+        plot.title=element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.ticks.x.bottom = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        legend.position="bottom",
+        plot.margin = margin(0,0,0,0, "cm")) + 
+  coord_flip() +
+  guides(x.sec = "axis", y.sec = "axis") +
+  scale_y_continuous(expand=c(0,0), limits = c(0, 7.835816), breaks = seq(0, 7.835816, by=7.835816), labels=c("0.000000" = "0", "7.835816" = "2528")) +
+  scale_x_continuous(expand=c(0,0), position = "top")
+
+
+p3 <- x2[which(x2$gene_index %in% downsample),] %>%
+  group_by(relative_position) %>%
+  summarise(nwps = sum(wps)) %>%
+  ggplot(aes(relative_position, nwps)) +
+  labs(x="", y="", title="Cumulative cfDNA nucleosomal positioning score") +
+  geom_line() +
+  theme_classic(base_size=10) +
+  theme(text = element_text(size=20),
+        #axis.title.x.bottom = element_text(angle=0, vjust = 10),
+        plot.title=element_text(hjust=0.5, vjust=0, size = 16),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        legend.position="bottom",
+        legend.box="horizontal",
+        legend.spacing.x = unit(0, "cm"),
+        plot.margin = margin(0.2,0.7,0,0.7, "cm")) +
+  scale_x_continuous(breaks=brks,
+                       labels=pos, 
+                       expand = c(0,0)) +
+  ggtitle("Cumulative cfDNA nucleosomal positioning score")
+
+
+p1_legend <- get_legend(p1)
+p1 <- p1 + theme(legend.position='none')
+#p2_legend <- get_legend(p2)
+#p2 <- p2 + theme(legend.position='none')
+#plot_combi <- plot_grid(plot_grid(p1, p2, ncol=2, nrow=1,align = "h", rel_widths = c(10,2)),
+#          plot_grid(NULL, p1_legend, p2_legend, NULL, ncol = 1, nrow = 4, align="v", axis="b"), #rel_widths = c(10,1))
+plot_combi1 <- plot_grid(p3, NULL, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi2 <- plot_grid(p1, p2, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi3 <- plot_grid(p1_legend, NULL, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi_tss_wps <- plot_grid(plot_combi1, plot_combi2, plot_combi3, NULL, ncol=1, rel_heights = c(2,15,1,0.5))
+title <- ggdraw() + 
+  draw_label(
+    "Nucleosome positioning over transcription start sites",
+    hjust = 0.5,
+    size = 20
+  ) +
+  theme(
+    # add margin on the left of the drawing canvas,
+    # so title is aligned with left edge of first plot
+    plot.margin = margin(0, 0, 0, 7)
+  )
+title <- plot_grid(title, NULL, ncol=2, nrow=1, rel_widths = c(10,1), align = "h")
+plot_combi_tss_wps_title <- plot_grid(title, plot_combi_tss_wps, ncol = 1, rel_heights = c(1,15))
+```
+
+## Supplementary Figure 13: combine Supplementary Figure 13A, Supplementary Figure 13B
+
+```{r}
+small_size <- plot_grid(plot_combi_cpg_wps_title, NULL, plot_combi_tss_wps_title, rel_widths = c(1,0.1,1), labels=c("a", "", "b"), nrow=1,label_size = 20)
+#ggsave(paste("../output_final/Fig_3EF.pdf"), plot = small_size, device = "pdf",width = 20, height=12,units = "in", dpi=600, bg = "white", scale = 0.78)
+ggsave(paste("../output/Supplementary_Fig_13.jpg"), plot = small_size, device = "jpg",width = 20, height=12,units = "in", dpi=600, bg = "white", scale = 0.82)
+
+```

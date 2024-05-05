@@ -1,0 +1,244 @@
+---
+title: "Pre_Figure3.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/Moss")
+dir.create("../../cfepigenetics_data/Moss/results")
+dir.create("../../cfepigenetics_data/reads_per_tilebig")
+dir.create("../../cfepigenetics_data/reads_per_tilesmall")
+dir.create("../../cfepigenetics_data/cov_size_bins_tss2500")
+dir.create("../../cfepigenetics_data/cov_size_bins_cpg2500")
+```
+
+
+## Process the data from the Moss et al. 
+
+Download and extract the data (from command line in the newly created directory)
+
+`wget ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE122nnn/GSE122126/suppl/GSE122126_RAW.tar`
+`tar -xvf GSE122126_RAW.tar`
+
+Process the files
+
+```{r}
+path <- "../../cfepigenetics_data/Moss"
+if (!file.exists(file.path(path, "results", "healthy.rds"))) {
+  files <- list.files(path)
+  foi <- c("GSM3455776", "GSM3455777", "GSM3455778", "GSM3455779", "GSM3455780", "GSM3455781", "GSM3455782", "GSM3455783")
+  foi_legend <- c("young_male_1", "young_male_2", "young_female_1", "young_female_2", "old_male_1", "old_male_2", "old_female_1", "old_female_2")
+  array <- c()
+  f <- c()
+  slide <- c()
+  for (i in foi) {
+    array <- c(array, unlist(strsplit(files[grep("Grn", files)][grep(i, files[grep("Grn", files)])], "_"))[3])
+    f <- c(f, files[grep("Grn", files)][grep(i, files[grep("Grn", files)])],files[grep("Red", files)][grep(i, files[grep("Red", files)])])
+    slide <- c(slide, as.numeric(unlist(strsplit(files[grep("Grn", files)][grep(i, files[grep("Grn", files)])], "_"))[2]))
+  }
+
+  targets <- data.frame("Sample_Name" = paste0(slide, "_", array),
+                        "Sample_Well" = NA,
+                        "Sample_Plate" = NA,
+                        "Sample_Group" = NA,
+                        "Pool_ID" = foi_legend,
+                        "Array" = array,
+                        "Slide" = slide,
+                        "Basename" = file.path(path,paste0(foi, "_", slide, "_", array)))
+  RGset <- read.metharray.exp(targets = targets)
+  GRset.funnorm <- preprocessFunnorm(RGset, bgCorr = TRUE, dyeCorr = TRUE, ratioConvert=T)
+  Mdata.mapped <- mapToGenome(GRset.funnorm)
+  beta <- getBeta(Mdata.mapped)
+  annotation <- getAnnotation(Mdata.mapped)
+  position <- annotation[1:2]
+  total <- merge(position, beta, by=0)
+  saveRDS(total, file.path(path, "results", "healthy.rds"))
+}
+
+#remove files that were not used: 
+protect <- c()
+for (i in 1:nrow(targets)) {
+  temp_protect <- grep(targets[i,]$Basename, paste0("../../cfepigenetics_data/Moss/", files))
+  protect <- c(protect, temp_protect)
+}
+files_remove <- files[-protect]
+files_remove <- files_remove[grep(".idat.gz", files_remove)]
+file.remove(file.path(path, files_remove))
+file.remove(file.path(path, "GSE122126_RAW.tar"))
+```
+
+files to process:
+
+*analysis/code/reads_per_tilebig.sh* -> outputs "../../cfepigenetics_data/reads_per_tilebig"
+    Combines the mononucleosomal reads (size >= 100 and <= 220) of 543 samples from healthy individuals per big bin (5000k bases).
+*analysis/code/reads_per_tilesmall.sh* -> outputs "../../cfepigenetics_data/reads_per_tilesmall"
+    Calculates the coverage, average fragment size and window protection score (adjusted and normalized) for each position of a small bin (100k bases). 
+ *analysis/code/cov_size_bins_tss2500.sh* -> outputs "../../cfepigenetics_data/cov_size_bins_tss2500"
+    Calculates the coverage, fragment size (after only selecting the mononucleosomal fragments (size >= 100 and <= 220)) and the adjusted and normalized window protection score (nucleosomal positions) in a bin of +/- 2500 basepairs around the transcription start site per 10 basepairs bin.
+ *analysis/code/cov_size_bins_cpg2500.sh* -> outputs "../../cfepigenetics_data/cov_size_bins_cpg2500"
+    Calculates the coverage, fragment size (after only selecting the mononucleosomal fragments (size >= 100 and <= 220)) and the adjusted and normalized window protection score (nucleosomal positions) in a bin of +/- 2500 basepairs around the middle of the CpG-islands per 10 basepairs bin.
+    
+
+## Pre-requisites
+
+These packages are necessary to make the data-structure that are necessary to make Figure 3.
+
+```{r}
+library("GenomicRanges")
+library("annotatr")
+library("BSgenome.Hsapiens.UCSC.hg19")
+library("tidyverse")
+library("IlluminaHumanMethylationEPICanno.ilm10b2.hg19")
+library("biomaRt")
+```
+
+
+## Construct files for metrics around TSS
+
+```{r}
+loc <- "../../cfepigenetics_data/cov_size_bins_tss2500"
+ls <- list.files(loc)
+
+tss <- read.table(file = "../data/transcriptAnno-GRCh37.75.tsv")
+tss <- tss[which(tss$V2 %in% c(1:22)),]
+tss$V2 <- paste0("chr", tss$V2)
+tissue_key <- read.table("../data/tissue_key.tsv",as.is=T,header=T,sep="\t",quote="\"")
+conv <- read.table('../data/labels.txt',as.is=T,header=T,sep="\t",quote="\"")
+rna <- read.table('../data/RNAtable.tsv.gz',as.is=T,header=T)
+express <- conv[which(conv$Category %in% c("Myeloid")),]$RName
+express_df <- rna[c("GeneID", express)]
+express_df$mean <- rowMeans(express_df[,c(2:(length(express) + 1))], na.rm=T)
+express_df <- express_df[order(-express_df$mean),]
+geneid_ordered <- express_df$GeneID
+tss$expression <- 0
+tss <- tss[which(tss$V1 %in% express_df$GeneID),]
+tss[match(express_df[which(express_df$GeneID %in% tss$V1),]$GeneID, tss$V1),]$expression <- express_df[which(express_df$GeneID %in% tss$V1),]$mean
+tss <- tss[order(-tss$expression),]
+colnames(tss) <- c("transcript", "seqnames", "start", "end", "strand", "expression")
+
+m_cov <- matrix(0, nrow = nrow(tss), ncol = 501)
+m_size <- matrix(0, nrow = nrow(tss), ncol = 501)
+m_wps <- matrix(0, nrow = nrow(tss), ncol = 501)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(loc, file))
+  for (i in c(1:nrow(temp))) {
+    #print(i)
+    m_cov[temp[i,]$subjectHits, temp[i,]$relpos_500] <- temp[i,]$mean_cov
+    m_size[temp[i,]$subjectHits, temp[i,]$relpos_500] <- temp[i,]$mean_size
+    m_wps[temp[i,]$subjectHits, temp[i,]$relpos_500] <- temp[i,]$mean_wps
+  }
+}
+saveRDS(m_cov, "../data/tss_cov_smallfragments.rds")
+saveRDS(m_size, "../data/tss_size_smallfragments.rds")
+saveRDS(m_wps, "../data/tss_wps_smallfragments.rds")
+```
+
+
+## Construct files for metrics around CpG
+
+```{r}
+loc <- "../../cfepigenetics_data/cov_size_bins_cpg2500"
+ls <- list.files(loc)
+
+he <- readRDS("../../cfepigenetics_data/Moss/results/healthy.rds")
+he <- he[which(he$chr %in% paste0("chr", c(1:22))),]
+hegr <- GRanges(paste0(he$chr, ":", he$pos, "-", he$pos+1))
+hese <- as.character(getSeq(Hsapiens, hegr))
+hegr$beta <- rowMeans(he[,c(4:11)])
+hegr <- hegr[which(hese == "CG")]
+annots = c('hg19_cpgs')
+annotations = build_annotations(genome = 'hg19', annotations = annots)
+annotations <- annotations[which(seqnames(annotations) %in% paste0("chr", c(1:22)))]
+annotations <- annotations[which(annotations$type == "hg19_cpg_islands")]
+over <- as_tibble(data.frame(findOverlaps(hegr, annotations)))
+over$beta <- hegr[over$queryHits]$beta
+over <- over %>%
+  group_by(subjectHits) %>%
+  summarize(mean_beta = mean(beta))
+annotations$beta <- 2
+annotations[over$subjectHits,]$beta <- over$mean_beta
+annotations <- annotations[which(annotations$beta != 2)]
+annotations <- annotations[order(annotations$beta)]
+tssgr <- annotations
+start(tssgr) <- (c(end(tssgr) - start(tssgr))/2) + start(tssgr)
+end(tssgr) <- start(tssgr)
+tssgrspec <- tssgr
+
+width <- 2500
+start(tssgrspec) <- start(tssgrspec) - width
+end(tssgrspec) <- end(tssgrspec) + width
+
+m_cov <- matrix(0, nrow = length(tssgrspec), ncol = 501)
+m_size <- matrix(0, nrow = length(tssgrspec), ncol = 501)
+m_wps <- matrix(0, nrow = length(tssgrspec), ncol = 501)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(loc, file))
+  for (i in c(1:nrow(temp))) {
+    m_cov[temp[i,]$subjectHits, temp[i,]$relpos_500] <- temp[i,]$mean_cov
+    m_size[temp[i,]$subjectHits, temp[i,]$relpos_500] <- temp[i,]$mean_size
+    m_wps[temp[i,]$subjectHits, temp[i,]$relpos_500] <- temp[i,]$mean_wps
+  }
+}
+saveRDS(m_cov, "../data/cpg_cov_smallfragments.rds")
+saveRDS(m_size, "../data/cpg_size_smallfragments.rds")
+saveRDS(m_wps, "../data/cpg_wps_smallfragments.rds")
+```
+
+
+## Connect TSS with CPG (for multivariate model)
+
+```{r}
+he <- readRDS("../../cfepigenetics_data/Moss/results/healthy.rds")
+he <- he[which(he$chr %in% paste0("chr", c(1:22))),]
+hegr <- GRanges(paste0(he$chr, ":", he$pos, "-", he$pos+1))
+hese <- as.character(getSeq(Hsapiens, hegr))
+hegr$beta <- rowMeans(he[,c(4:11)])
+hegr <- hegr[which(hese == "CG")]
+annots = c('hg19_cpgs')
+annotations = build_annotations(genome = 'hg19', annotations = annots)
+annotations <- annotations[which(seqnames(annotations) %in% paste0("chr", c(1:22)))]
+annotations <- annotations[which(annotations$type == "hg19_cpg_islands")]
+over <- as_tibble(data.frame(findOverlaps(hegr, annotations)))
+over$beta <- hegr[over$queryHits]$beta
+over <- over %>%
+  group_by(subjectHits) %>%
+  summarize(mean_beta = mean(beta))
+annotations$beta <- 2
+annotations[over$subjectHits,]$beta <- over$mean_beta
+annotations <- annotations[which(annotations$beta != 2)]
+annotations <- annotations[order(annotations$beta)]
+
+tss <- read.table(file = "../data/transcriptAnno-GRCh37.75.tsv")
+tss <- tss[which(tss$V2 %in% c(1:22)),]
+tss$V2 <- paste0("chr", tss$V2)
+tissue_key <- read.table("../data/tissue_key.tsv",as.is=T,header=T,sep="\t",quote="\"")
+conv <- read.table('../data/labels.txt',as.is=T,header=T,sep="\t",quote="\"")
+rna <- read.table('../data/RNAtable.tsv.gz',as.is=T,header=T)
+express <- conv[which(conv$Category %in% c("Myeloid")),]$RName
+express_df <- rna[c("GeneID", express)]
+express_df$mean <- rowMeans(express_df[,c(2:(length(express) + 1))], na.rm=T)
+express_df <- express_df[order(-express_df$mean),]
+geneid_ordered <- express_df$GeneID
+tss$expression <- 0
+tss <- tss[which(tss$V1 %in% express_df$GeneID),]
+tss[match(express_df[which(express_df$GeneID %in% tss$V1),]$GeneID, tss$V1),]$expression <- express_df[which(express_df$GeneID %in% tss$V1),]$mean
+tss <- tss[order(-tss$expression),]
+colnames(tss) <- c("transcript", "seqnames", "start", "end", "strand", "expression")
+tssgr <- GRanges(paste0(tss$seqnames, ":", tss$start, "-", tss$end, ":", tss$strand))
+tssgr$trans <- tss$transcript
+tssgr$rna <- tss$expression
+end(tssgr[which(strand(tssgr) == "+")]) <- start(tssgr[which(strand(tssgr) == "+")])
+start(tssgr[which(strand(tssgr) == "-")]) <- end(tssgr[which(strand(tssgr) == "-")])
+
+tssgr$beta <- annotations[nearest(tssgr, annotations)]$beta
+
+saveRDS(as_tibble(tssgr)[,c(6,7,8)], "../data/tss_cpg_connect.rds")
+
+t <- readRDS("../data/tss_cpg_connect.rds")
+```
+

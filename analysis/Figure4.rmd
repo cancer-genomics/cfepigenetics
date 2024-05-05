@@ -1,0 +1,203 @@
+---
+title: "Figure4.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Figure 4.
+
+```{r}
+library("tidyverse")
+library("pROC")
+library("ggplot2")
+library("cowplot")
+```
+
+
+## Figure 4A: 
+
+```{r}
+all <- readRDS("../data/carvalho_motifs.rds")
+colnames(all) <- c("motif", "sign", "start", "over", "start_extra", "over_extra", "sample", "group_id", "group")
+
+#all <- all[-which(is.na(all$group)),]
+all$group <- factor(all$group, levels=c("CGPLH", "CGPLPA", "CGCRC", "CGPLOV", "CGPLLU", "CGPLBR", "CGST"))
+all$ratio <- all$start / all$over
+all$ratio_extra <- all$start_extra / all$over_extra
+all$ratio_ratio1 <- (all$start / all$over) / (all$start_extra / all$over_extra)
+all$ratio_ratio2 <- (all$start_extra / all$over_extra) / (all$start / all$over)
+
+temp1 <- all[,c(1,2,9,10)]
+temp2 <- all[,c(1,2,9,11)]
+temp3 <- all[,c(1,2,9,12)]
+temp4 <- all[,c(1,2,9,13)]
+temp1$class <- "regular"
+temp2$class <- "extra"
+temp3$class <- "ratio1"
+temp4$class <- "ratio2"
+colnames(temp1) <- c("motif", "sign", "group", "ratio", "method")
+colnames(temp2) <- c("motif", "sign", "group", "ratio", "method")
+colnames(temp3) <- c("motif", "sign", "group", "ratio", "method")
+colnames(temp4) <- c("motif", "sign", "group", "ratio", "method")
+al <- rbind(temp1, temp2, temp3, temp4)
+
+sum <- al %>%
+  group_by(motif, sign, method, group) %>%
+  summarise()
+sum <- sum[which(sum$group != "CGPLH"),]
+sum$pvalue <- 1
+for (i in c(1:nrow(sum))) {
+  print(i)
+  cases <- al[which((al$motif == sum[i,]$motif) & 
+             (al$sign == sum[i,]$sign) & 
+             (al$method == sum[i,]$method) &
+             (al$group == sum[i,]$group)),]$ratio
+  controls <- al[which((al$motif == sum[i,]$motif) & 
+             (al$sign == sum[i,]$sign) & 
+             (al$method == sum[i,]$method) &
+             (al$group == "CGPLH")),]$ratio
+  sum[i,]$pvalue <- t.test(cases, controls)[[3]]
+}
+
+dose.labs <- c("healthy methylated - pancreatic cancer unmethylated", "healthy unmethylated - pancreatic cancer methylated")
+names(dose.labs) <- c(-1, 1)
+#new <- rbind(al[which((nchar(all$group) == 4) & (al$sign == -1)),],
+            # al[which((nchar(all$group) == 3) & (al$sign == 1)),])
+new <- al[-which(al$group == "CGST"),]
+new$motif2 <- new$motif
+#new[which(nchar(new$motif2) == 3),]$motif2 <- sub("CG", "CCG", new[which(nchar(new$motif2) == 3),]$motif2)
+new[which(nchar(new$motif) == 4),]$motif <- sub("CCG", " | CCG", new[which(nchar(new$motif) == 4),]$motif)
+new[which(nchar(new$motif) == 3),]$motif <- sub("CG", " | CG", new[which(nchar(new$motif) == 3),]$motif)
+new$motif <- factor(new$motif, levels = c( "C | CG", "G | CG", "A | CG", "T | CG", "C | CCG", "G | CCG",  "A | CCG",  "T | CCG"))
+new$label <- "NAs"
+new[which(new$sign == -1),]$label <- "healthy methylated - pancreatic cancer unmethylated"
+new[which(new$sign == 1),]$label <- "healthy unmethylated - pancreatic cancer methylated"
+new$pvalue <- 1
+new$pvalue <- sum[match(paste0(new$motif2,"_", new$sign, "_", new$method, "_", new$group), paste0(sum$motif,"_", sum$sign, "_", sum$method, "_", sum$group)),]$pvalue
+new[which(is.na(new$pvalue)),]$pvalue <- 1
+
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(cowplot)
+require(gtable)
+library(ggplotify)
+plot1 <- ggplot(data=new[which((new$method == "regular") & (nchar(as.character(new$motif)) == 7) & (new$label == "healthy methylated - pancreatic cancer unmethylated")),], aes(x = group, y=ratio)) +
+  geom_boxplot(outlier.shape = NA, aes(fill=-log(pvalue, 10))) +
+  geom_jitter(size=0.2, alpha=0.1) +
+  scale_fill_gradient2(high="#77dd77", low="white", breaks = c(15, 12.5, 10, 7.5, 5, 2.5, 0), limits=c(0,14), name="p-value (-log10)") +
+  facet_grid(cols=vars(motif), rows=vars(label),
+             labeller = label_wrap_gen(31)) +
+  theme_classic(base_size = 20) +
+  theme(strip.text.y=element_text(angle=0),
+        text = element_text(size=16),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA)) +
+  scale_x_discrete(labels=c("CGPLH" = "non-cancer", "CGPLPA" = "pancreatic cancer",
+                            "CGCRC" = "colorectal cancer", "CGPLOV" = "ovarian cancer",
+                            "CGPLLU" = "lung cancer", 
+                            "CGPLBR" = "breast cancer")) +
+  scale_y_continuous(labels = scales::percent)
+#ggsave("/Users/mnoe/Documents/carvalho_comparison_12cycles_ratio.jpg", plot = plot1, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+
+plot2 <- ggplot(data=new[which((new$method == "regular") & (nchar(as.character(new$motif)) == 6) & (new$label == "healthy unmethylated - pancreatic cancer methylated")) ,], aes(x = group, y=ratio)) +
+  geom_boxplot(outlier.shape = NA, aes(fill=-log(pvalue, 10))) +
+  geom_jitter(size=0.2, alpha=0.1) +
+  scale_fill_gradient2(high="#77dd77", low="white", breaks = c(15, 12.5, 10, 7.5, 5, 2.5,0), limits=c(0,14), name="p-value (-log10)") +
+  facet_grid(cols=vars(motif), rows=vars(label),
+             labeller = label_wrap_gen(31)) +
+  theme_classic(base_size = 20) +
+  theme(strip.text.y=element_text(angle=0),
+        text = element_text(size=16),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA)) +
+  scale_x_discrete(labels=c("CGPLH" = "non-cancer", "CGPLPA" = "pancreatic cancer",
+                            "CGCRC" = "colorectal cancer", "CGPLOV" = "ovarian cancer",
+                            "CGPLLU" = "lung cancer", 
+                            "CGPLBR" = "breast cancer")) +
+  scale_y_continuous(labels = scales::percent)
+#ggsave("/Users/mnoe/Documents/carvalho_comparison_12cycles_extra.jpg", plot = plot2, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+
+
+y.grob <- textGrob("Fraction of cfDNA fragments starting or ending at motif", gp=gpar(fontsize=16), rot=90)
+y.grob <- ggplotify::as.ggplot(y.grob)
+plotA <- cowplot::plot_grid(
+              plot1 + theme(legend.position = "none"),
+              plot2 + theme(legend.position = c(1.2, 1.3)),
+              ncol=1, align="hv") +
+        theme(plot.background = element_rect(fill = "white", colour = NA))
+plot <- plot_grid(NULL,y.grob,NULL,plotA, rel_widths = c(0.01,0.02,0.01,1), ncol=4) +
+        theme(plot.background = element_rect(fill = "white", colour = NA))
+#ggsave("../output_final/Fig_4A.jpg", plot = plot, device = "jpeg",width = 13.3333, height=12,units = "in", dpi=300)
+```
+
+
+## Figure 4B: 
+
+```{r}
+data <- read.csv("../data/All_Scores.csv")
+delfi_roc<-pROC::roc(data$type,data$score.delfi,ci=TRUE,levels=c("healthy","cancer"))
+#meth_roc<-pROC::roc(data$type,data$score.meth,ci=TRUE,levels=c("healthy","cancer"))
+meth_reg_roc<-pROC::roc(data$type,data$score.meth_reg,ci=TRUE,levels=c("healthy","cancer"))
+ens_roc<-pROC::roc(data$type,data$ens_preds,ci=TRUE,levels=c("healthy","cancer"))
+
+
+delfi_type<-paste0("DELFI: ",round(delfi_roc$auc[1],2)," (",round(delfi_roc$ci[1],2),"-",round(delfi_roc$ci[3],2),")")
+#meth_type<-paste0("Methylation (with ratios): ",sprintf('%.2f', meth_roc$auc[1])," (",round(meth_roc$ci[1],2),"-",round(meth_roc$ci[3],2),")")
+meth_reg_type<-paste0("Methylation: ",round(meth_reg_roc$auc[1],2)," (",round(meth_reg_roc$ci[1],2),"-",round(meth_reg_roc$ci[3],2),")")
+ens_type<-paste0("Ensemble: ",round(ens_roc$auc[1],2)," (",round(ens_roc$ci[1],2),"-",round(ens_roc$ci[3],2),")")
+
+
+res<-tibble(type=delfi_type,sens=delfi_roc$sensitivities,spec=delfi_roc$specificities)
+#res1<-tibble(type=meth_type,sens=meth_roc$sensitivities,spec=meth_roc$specificities)
+res2<-tibble(type=meth_reg_type,sens=meth_reg_roc$sensitivities,spec=meth_reg_roc$specificities)
+res3<-tibble(type=ens_type,sens=ens_roc$sensitivities,spec=ens_roc$specificities)
+
+res<-rbind(res,
+           #res1,
+           res2,
+           res3)
+res$type<-factor(res$type,levels=c(#meth_type,
+                                   meth_reg_type,
+                                   delfi_type,
+                                   ens_type))
+
+B <- res %>%
+    ggplot(aes(spec, sens, group=type,color=type)) +
+    geom_vline(xintercept=0.80,
+               color="gray80", linewidth=0.5, linetype="dashed") +
+    geom_path(aes(color=type), linewidth=1.1) +
+    scale_x_reverse(expand=c(0, 0.01),
+                    breaks=c(0, 0.25, 0.5, 0.80, 1),
+                    labels=as.character(
+                        c("0", ".25", ".50", ".80", "1.0"))) +
+    scale_y_continuous(expand=c(0, 0.01),
+                       breaks=c(0, 0.25, 0.5, 0.75, 1),
+                       labels=as.character(
+                           c("0", ".25", ".50", ".75", "1.0"))) +
+    scale_color_manual(values=c("#77C8DD", "#337E99", "#77dd77", "#dd8677")) +
+    theme_classic(base_size=20) +
+    theme(panel.grid=element_blank(),
+          legend.position=c(0.6, 0.2),
+          aspect.ratio=0.8,
+          legend.text.align=1,
+          text = element_text(size=16)) +
+    xlab("Specificity") + ylab("Sensitivity") +
+    guides(color=guide_legend(title="AUC: (95% confidence interval)", hjust=1))
+```
+
+
+## Figure 4: combine Figure 4A, Figure 4B
+
+```{r}
+p <- plot_grid(plot, B,ncol=2, rel_widths = c(1,0.5), labels = c("a", "b"), label_size = 16) +
+        theme(plot.background = element_rect(fill = "white", colour = NA))
+ggsave("../output/Fig_4.jpg", plot = p, device = "jpeg",width = 180, height=108,units = "mm", dpi=600, scale = 3)
+```

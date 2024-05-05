@@ -1,0 +1,152 @@
+---
+title: "Supplementary_Figure10.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 10.
+
+```{r}
+library("ggplot2")
+library("tidyverse")
+library("cowplot")
+library("gridExtra")
+library("ggpubr")
+```
+
+
+## Supplementary Figure 10
+
+```{r}
+t <- readRDS("../data/cpg_500000_topbot1000.rds")
+t$beta <- sub("cpg_highmet", "High methylation at CpG-islands", t$beta)
+t$beta <- sub("cpg_lowmet", "Low methylation at CpG-islands", t$beta)
+t$beta <- factor(t$beta, levels = c("Low methylation at CpG-islands", "High methylation at CpG-islands"))
+cpg_cov <- ggplot(t, aes(x=relpos_500,y=cov)) +
+  geom_line(aes(group = beta, color = beta), alpha = 1) +
+  #geom_smooth(method = "loess", se = FALSE, span = 0.001, aes(group= beta, color = beta)) +
+  scale_x_continuous(breaks = c(1,251,501), labels=format(c(-500000, 0, 500000), scientific = FALSE)) +
+  ggtitle("Coverage around CpG-islands") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(t = 20, b = 0)),
+        legend.position = c(0.75,0.25),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0))) +
+  xlab("") +
+  ylab("Cumulative coverage") +
+  ylim(400, 1000) +
+  scale_color_manual(values= c("#004766", "#77C8DD"))
+
+cpg_size <- ggplot(t, aes(x=relpos_500,y=size)) +
+  geom_line(aes(group = beta, color = beta), alpha = 1) +
+  #geom_smooth(method = "loess", se = FALSE, span = 0.5, aes(group=beta, color = beta)) +
+  scale_x_continuous(breaks = c(1,251,501), labels=format(c(-500000, 0, 500000), scientific = FALSE)) +
+  ggtitle("cfDNA fragment size around CpG-islands") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(t = 20, b = 0)),
+        legend.position = c(0.75,0.25),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0))) +
+  ylim(166, 171) +
+  xlab("") +
+  ylab("Average cfDNA-size")  +
+  scale_color_manual(values= c("#004766", "#77C8DD"))
+
+t <- readRDS("../data/tss_500000_topbot1000.rds")
+t$group <- sub("expressed", "High expression", t$group)
+t$group <- sub("not High expression", "Low expression", t$group)
+tss_cov <- ggplot(t, aes(x=relpos_500,y=cov)) +
+  geom_line(aes(group = group, color = group), alpha = 1) +
+  #geom_smooth(method = "loess", se = FALSE, span = 0.5, aes(group=group, color = group)) +
+  scale_x_continuous(breaks = c(1,251,501), labels=format(c(-500000, 0, 500000), scientific = FALSE)) +
+  ggtitle("Coverage around transcription start sites") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(t = 20, b = 0)),
+        legend.position = c(0.75,0.25),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0))) +
+  xlab("") +
+  ylab("") +
+  ylim(400, 1000) +
+  scale_color_manual(values= c("#52c922","#1b7d0e"))
+
+tss_size <- ggplot(t, aes(x=relpos_500,y=size)) +
+  geom_line(aes(group = group, color = group), alpha=1) +
+  #geom_smooth(method = "loess", se = FALSE, span = 0.5, aes(group=group, color = group)) +
+  scale_x_continuous(breaks = c(1,251,501), labels=format(c(-500000, 0, 500000), scientific = FALSE)) +
+  ggtitle("cfDNA fragment size around transcription start sites") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(t = 20, b = 0)),
+        legend.position = c(0.75,0.25),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0))) +
+  ylim(166, 171) +
+  xlab("") +
+  ylab("") +
+  scale_color_manual(values= c("#52c922","#1b7d0e"))
+
+
+t <- readRDS("../data/cpg_500000_topbot1000_beta2.rds")
+t$beta_group <- sub("cpg_highmet", "High methylation at CpG-islands", t$beta_group)
+t$beta_group <- sub("cpg_lowmet", "Low methylation at CpG-islands", t$beta_group)
+t$beta_group <- factor(t$beta_group, levels = c("Low methylation at CpG-islands", "High methylation at CpG-islands"))
+t[which(t$relpos_500 == 0),]$mean_beta <- NA
+t <- t %>%
+  group_by(beta_group, relpos_500) %>%
+  summarise(beta = mean(mean_beta))
+cpg_beta <- ggplot(t, aes(x=relpos_500,y=beta)) +
+  geom_line(aes(group = beta_group, color = beta_group), alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE, span = 0.2, aes(group= beta_group, color = beta_group)) +
+  scale_x_continuous(breaks = c(1,251,501), labels=format(c(-500000, 0, 500000), scientific = FALSE)) +
+  coord_cartesian(ylim=c(0.75, 0.9)) +
+  ggtitle("Methylation around CpG-islands") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(t = 20, b = 0)),
+        legend.position = c(0.75,0.25),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0))) +
+  xlab("Position relative to CpG-island") +
+  ylab("Average beta-value") +
+  #ylim(400, 1000) +
+  scale_color_manual(values= c("#004766", "#77C8DD"))
+
+t <- readRDS("../data/tss_500000_topbot1000_beta.rds")
+t$exp_group <- sub("tss_highexp", "High expression", t$exp_group)
+t$exp_group <- sub("tss_lowexp", "Low expression", t$exp_group)
+t$exp_group <- factor(t$exp_group, levels = c("High expression", "Low expression"))
+t <- t %>%
+  group_by(exp_group, relpos_500) %>%
+  summarise(beta = mean(mean_beta))
+tss_beta <- ggplot(t, aes(x=relpos_500,y=beta)) +
+  #geom_line()
+  geom_line(aes(group = exp_group, color = exp_group), alpha = 1) +
+  #geom_smooth(method = "loess", se = FALSE, span = 0.5, aes(group= beta, color = beta)) +
+  scale_x_continuous(breaks = c(1,251,501), labels=format(c(-500000, 0, 500000), scientific = FALSE)) +
+  ggtitle("Methylation around transcription start sites") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.x = element_text(margin = margin(t = 20, b = 0)),
+        legend.position = c(0.75,0.25),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0))) +
+  xlab("Position relative to TSS") +
+  ylab("Average beta-value") +
+  #ylim(400, 1000) +
+  scale_color_manual(values= c("#52c922","#1b7d0e"))
+
+up <- plot_grid(cpg_cov, tss_cov, nrow = 1, rel_heights = c(1,1), align = "v", labels = c('a', 'b'))
+down <- plot_grid(cpg_size, tss_size, nrow = 1, rel_heights = c(1,1), align = "v", labels = c('c', 'd'))
+downer <- plot_grid(cpg_beta, NULL, nrow = 1, rel_heights = c(1,1), align = "v", labels = c('e', ''))
+all <- plot_grid(up, down, downer, ncol=1, rel_heights = c(1,1,1), align="h")
+ggsave("../output/Supplementary_Fig_10.jpg", plot = all, device = "jpg",width = 180, height=108,units = "mm", dpi=600, bg = "white", scale = 3)
+```
+
+

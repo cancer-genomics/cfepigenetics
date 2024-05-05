@@ -1,0 +1,150 @@
+---
+title: "Pre_Figure4.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Prerequisites:
+
+In order to generate the plots from figure 4, we process the low coverage cfDNA sequencing data from the Cristiano et al., Nature, 2019 study. The processing requires the supplementary data from the Shen et al., Nature, 2018 study. These data-files are in the data-folder.
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/Carvalho")
+dir.create("../../cfepigenetics_data/Carvalho/12cycles")
+```
+
+files to process:
+  *analysis/code/carvalho_12cycles.sh* -> outputs "../../../cfepigenetics_data/Carvalho/12cycles"
+    Calculates for each motif containing a differentially methylated CG as described in the Shen et al. paper the ratio of fragment starting at the motif over fragments around this position, as well as the ratio starting on the position next to the initial position, as well as ratios of these two ratios.
+    
+
+## Combine output from carvalho_12cycles.sh
+
+```{r}
+loc <- "../../cfepigenetics_data/Carvalho/12cycles"
+files <- list.files(loc)
+all <- tibble()
+for (file in files) {
+  print(file)
+  temp <- readRDS(file.path(loc,file))
+  temp <- as_tibble(as.data.frame(temp))
+  colnames(temp) <- sub("group", "motif", colnames(temp))
+  temp$diff_sign <- sign(temp$diff)
+  sumtemp <- temp %>%
+    group_by(motif, diff_sign) %>%
+    summarise(start = sum(start_reads), 
+                  over = sum(over_reads),
+                  start_extra = sum(start_extra_reads),
+                  over_extra = sum(over_extra_reads))
+  sumtemp$case <- sub(".rds", "", file)
+  all <- rbind(all, sumtemp)
+}
+
+pat <- read.table("/dcl02/leased/cglab/rscharpf/mnoe/PROJECTS/delfi_annotation/tidy_data/patient.csv", sep = ",", header = T)
+sam <- read.table("/dcl02/leased/cglab/rscharpf/mnoe/PROJECTS/delfi_annotation/tidy_data/sample.csv", sep = ",", header = T)
+met <- read.table("/dcl01/scharpf1/data/cristiano/projects/DELFI_paper/metadata/sample_reference.csv", sep = ",", header = T)
+dmc <- readxl::read_xlsx("/dcl02/leased/cglab/rscharpf/mnoe/PROJECTS/cfdna_methylation_data/Carvalho/dmc/Supplementary_Table_3.xlsx")
+
+pgdx_raw <- unique(all$case)
+pgdx <- unique(all$case)
+pgdx <- sub("_X1", "", pgdx)
+pgdx <- sub("_S1", "", pgdx)
+pgdx <- sub("_S2", "", pgdx)
+pgdx <- sub("_Amended", "", pgdx)
+cg <- sam[match(pgdx, sam$wgs_pgdx_id),]$individual
+
+all$group_id <- cg[match(all$case, pgdx_raw)]
+all$group <- gsub('[[:digit:]]+', '', all$group_id)
+saveRDS(all, "../data/carvalho_motifs.rds")
+
+colnames(all) <- c("motif", "sign", "start", "over", "start_extra", "over_extra", "sample", "group_id", "group")
+all$group <- factor(all$group, levels=c("CGPLH", "CGPLPA", "CGCRC", "CGPLOV", "CGPLLU", "CGPLBR", "CGST"))
+all$ratio <- all$start / all$over
+all$ratio_extra <- all$start_extra / all$over_extra
+all$ratio_ratio1 <- (all$start / all$over) / (all$start_extra / all$over_extra)
+all$ratio_ratio2 <- (all$start_extra / all$over_extra) / (all$start / all$over)
+
+t <- tibble()
+for (i in unique(all$sample)) {
+  ttemp <- tibble("sample" = i,
+                  "class" =  unique(all[which(all$sample == i),]$group_id),
+                  "class_group" = unique(all[which(all$sample == i),]$group),
+                  "acg_1_regular" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == -1)),]$ratio,
+                  "acg_1_extra" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == -1)),]$ratio_extra,
+                  "acg_1_ratio1" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == -1)),]$ratio_ratio1,
+                  "acg_1_ratio2" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == -1)),]$ratio_ratio2,
+                  "acg_2_regular" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == 1)),]$ratio,
+                  "acg_2_extra" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == 1)),]$ratio_extra,
+                  "acg_2_ratio1" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == 1)),]$ratio_ratio1,
+                  "acg_2_ratio2" = all[which((all$sample == i) & (all$motif == "ACG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "tcg_1_regular" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == -1)),]$ratio,
+                  "tcg_1_extra" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == -1)),]$ratio_extra,
+                  "tcg_1_ratio1" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "tcg_1_ratio2" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "tcg_2_regular" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == 1)),]$ratio,
+                  "tcg_2_extra" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == 1)),]$ratio_extra,
+                  "tcg_2_ratio1" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "tcg_2_ratio2" = all[which((all$sample == i) & (all$motif == "TCG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "ccg_1_regular" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == -1)),]$ratio,
+                  "ccg_1_extra" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == -1)),]$ratio_extra,
+                  "ccg_1_ratio1" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "ccg_1_ratio2" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "ccg_2_regular" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == 1)),]$ratio,
+                  "ccg_2_extra" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == 1)),]$ratio_extra,
+                  "ccg_2_ratio1" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "ccg_2_ratio2" = all[which((all$sample == i) & (all$motif == "CCG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "gcg_1_regular" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == -1)),]$ratio,
+                  "gcg_1_extra" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == -1)),]$ratio_extra,
+                  "gcg_1_ratio1" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "gcg_1_ratio2" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "gcg_2_regular" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == 1)),]$ratio,
+                  "gcg_2_extra" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == 1)),]$ratio_extra,
+                  "gcg_2_ratio1" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "gcg_2_ratio2" = all[which((all$sample == i) & (all$motif == "GCG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "accg_1_regular" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == -1)),]$ratio,
+                  "accg_1_extra" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == -1)),]$ratio_extra,
+                  "accg_1_ratio1" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "accg_1_ratio2" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "accg_2_regular" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == 1)),]$ratio,
+                  "accg_2_extra" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == 1)),]$ratio_extra,
+                  "accg_2_ratio1" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "accg_2_ratio2" = all[which((all$sample == i) & (all$motif == "ACCG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "tccg_1_regular" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == -1)),]$ratio,
+                  "tccg_1_extra" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == -1)),]$ratio_extra,
+                  "tccg_1_ratio1" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "tccg_1_ratio2" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "tccg_2_regular" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == 1)),]$ratio,
+                  "tccg_2_extra" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == 1)),]$ratio_extra,
+                  "tccg_2_ratio1" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "tccg_2_ratio2" = all[which((all$sample == i) & (all$motif == "TCCG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "cccg_1_regular" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == -1)),]$ratio,
+                  "cccg_1_extra" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == -1)),]$ratio_extra,
+                  "cccg_1_ratio1" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "cccg_1_ratio2" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "cccg_2_regular" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == 1)),]$ratio,
+                  "cccg_2_extra" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == 1)),]$ratio_extra,
+                  "cccg_2_ratio1" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "cccg_2_ratio2" = all[which((all$sample == i) & (all$motif == "CCCG") & (all$sign == 1)),]$ratio_ratio2,
+                  
+                  "gccg_1_regular" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == -1)),]$ratio,
+                  "gccg_1_extra" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == -1)),]$ratio_extra,
+                  "gccg_1_ratio1" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == -1)),]$ratio_ratio1,
+                  "gccg_1_ratio2" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == -1)),]$ratio_ratio2,
+                  "gccg_2_regular" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == 1)),]$ratio,
+                  "gccg_2_extra" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == 1)),]$ratio_extra,
+                  "gccg_2_ratio1" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == 1)),]$ratio_ratio1,
+                  "gccg_2_ratio2" = all[which((all$sample == i) & (all$motif == "GCCG") & (all$sign == 1)),]$ratio_ratio2)
+  t <- rbind(t, ttemp)
+}
+saveRDS(t, "../data/carvalho_motifs_ML.rds")
+```
+
+

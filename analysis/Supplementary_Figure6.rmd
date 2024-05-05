@@ -1,0 +1,93 @@
+---
+title: "Supplementary_Figure6.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 6.
+
+```{r}
+library("ggplot2")
+library("tidyverse")
+library("cowplot")
+```
+
+
+## Supplementary Figure 6: an updated version of Supplementary Figure 5, based on Loyfer data.
+
+```{r}
+t <- readRDS("../data/Loyfer_50_ratios.rds")
+t[which(nchar(t$seq) == 3),]$seq <- paste0(substr(t[which(nchar(t$seq) == 3),]$seq, 1, 1), " | ", substr(t[which(nchar(t$seq) == 3),]$seq, 2, 3))
+t[which(nchar(t$seq) == 4),]$seq <- paste0(substr(t[which(nchar(t$seq) == 4),]$seq, 1, 1), " | ", substr(t[which(nchar(t$seq) == 4),]$seq, 2, 4))
+t$seq <- factor(t$seq, levels = c("C | CG", "G | CG", "A | CG", "T | CG",
+                                  "C | CCG", "G | CCG", "A | CCG", "T | CCG"))
+#t$beta <- round(t$beta, digits = 1)
+t$char <- nchar(as.character(t$seq))
+t <- t %>%
+  group_by(beta, group, char) %>%
+  summarise(start = sum(start), over = sum(over))
+t$ratio <- t$start / t$over
+t_add <- t %>%
+  group_by(char, group) %>%
+  summarise(beta = 1, start = 0, over = 1, ratio = 0)
+t <- rbind(t, t_add)
+t$group2 <- "NA"
+t[which(t$char == 6),]$group2 <- "A/T/C/G | CG"
+t[which(t$char == 7),]$group2 <- "A/T/C/G | CCG"
+t$group2 <- factor(t$group2, levels = c("A/T/C/G | CG", "A/T/C/G | CCG"))
+t$group <- sub("hg19_cpg_", "", t$group)
+t$group <- sub("inter", "Open sea", t$group)
+t$group <- sub("islands", "Islands", t$group)
+t$group <- sub("shores", "Shores", t$group)
+t$group <- sub("shelves", "Shelves", t$group)
+t$group <- factor(t$group, levels = c("Islands", "Shores", "Shelves", "Open sea"))
+plot1 <- ggplot(t[which(nchar(as.character(t$group2)) == 12),], aes(x=factor(beta), y=ratio, fill=beta)) +
+  geom_bar(stat="identity", position = "dodge") +
+  facet_grid(group2~group) +
+  theme_classic(base_size = 20) +
+  #xlab("Methylation (beta-value)") +
+
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CGs") + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,0.0075),
+                     breaks = c(0.0075,0.005,0.0025,0)) +
+  scale_x_discrete(labels=c("0", "1"),
+                   breaks = c(0, 1)) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_text(angle = 0, hjust=0.5),
+        #axis.text.x = element_blank(),
+        #axis.title.y = element_text(margin = margin(r = 5)),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "outside",
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_fill_gradient(low="#77C8DD", high="#004766")
+plot2 <- ggplot(t[which(nchar(as.character(t$group2)) == 13),], aes(x=factor(beta), y=ratio, fill=beta)) +
+  geom_bar(stat="identity", position = "dodge") +
+  facet_grid(group2~group) +
+  theme_classic(base_size = 20) +
+  xlab("Methylation (beta-value)") +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs") + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,0.0075),
+                     breaks = c(0.0075,0.005,0.0025,0)) +
+  scale_x_discrete(labels=c("0", "1"),
+                   breaks = c(0, 1)) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_text(angle = 0, hjust=0.5),
+        #axis.text.x = element_blank(),
+        #axis.title.y = element_text(margin = margin(r = 5)),
+        axis.title.x = element_text(margin = margin(t = 20, b=20)),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "outside",
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_fill_gradient(low="#77C8DD", high="#004766")
+plot <- plot_grid(plot1, plot2, nrow=2, rel_heights = c(0.90,1))
+
+ggsave("../output/Supplementary_Fig_6.jpg", plot = plot, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+```

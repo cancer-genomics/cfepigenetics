@@ -1,0 +1,55 @@
+### Required Libraries
+```{r}
+library(tidyverse)
+library(fgsea)
+library(ggplot2)
+library(ggpubr)
+library(data.table)
+library(ComplexHeatmap)
+library(sjPlot)
+library(here)
+```
+
+### Run linear model fitting RNA, methylation, and WPS to coverage and size.
+```{r, fig.height=5, fig.width=6}
+# Read in table methylation, expression, and sizes
+ticks <- c(-36, -16, -4, 0, 4, 16, 36)
+trans <- scales::trans_new('Signed.Sqrt', 
+      function(x) sign(x) * sqrt(abs(x)), 
+      function(x) sign(x) * (abs(x)^2),
+      breaks=function(x) ticks)
+tab <- readRDS(here('data/giraffe/tss_cpg_connect_filled.rds')) %>%
+  column_to_rownames('trans') %>%
+  mutate(Coverage = log10(cov + 1)) %>%
+  mutate(RNA=scale(log10(rna + 1))) %>%
+  mutate(WPS=scale(wps)) %>%
+  mutate(Beta=beta) %>%
+  mutate(Size=size) %>%
+  filter(!is.na(WPS) & !is.na(Beta) & !is.na(RNA) & Size > 0) %>%
+  mutate(Methylated=Beta > 0.5) %>%
+  mutate(WPS=wps)
+
+# Fit and plot coverage
+full_model <- glm(Coverage ~ poly(WPS, 3) * RNA  + Beta * poly(WPS, 3) + RNA * Beta, data=tab)
+plot_model(full_model) +
+  scale_x_discrete(labels=c('RNA * Meth',
+    'WPS\u00b3 * Meth', 'WPS\u00b2 * Meth', 'WPS * Meth',  
+    'WPS\u00b3 * RNA', 'WPS\u00b2 * RNA', 'WPS * RNA', 
+    'Meth', 'RNA', 'WPS\u00b3', 'WPS\u00b2', 'WPS')) +
+  theme_classic(base_size=20) +
+  geom_hline(yintercept=0, color='grey', linewidth=0.5) +
+  scale_y_continuous(trans=trans, breaks=ticks) +
+  ylab('Coefficient')
+
+# Fit and plot size
+full_model <- glm(Size ~ poly(WPS, 3) * RNA  + Beta * poly(WPS, 3) + RNA * Beta, data=tab)
+plot_model(full_model) +
+  scale_x_discrete(labels=c('RNA * Meth',
+    'WPS\u00b3 * Meth', 'WPS\u00b2 * Meth', 'WPS * Meth',  
+    'WPS\u00b3 * RNA', 'WPS\u00b2 * RNA', 'WPS * RNA', 
+    'Meth', 'RNA', 'WPS\u00b3', 'WPS\u00b2', 'WPS')) +
+  theme_classic(base_size=20) +
+  geom_hline(yintercept=0, color='grey', linewidth=0.5) +
+  scale_y_continuous(trans=trans, breaks=ticks) +
+  ylab('Coefficient')
+```

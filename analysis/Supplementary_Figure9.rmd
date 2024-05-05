@@ -1,0 +1,46 @@
+### Required Libraries
+```{r}
+library(SummarizedExperiment)
+library(ggplot2)
+library(ggpubr)
+library(GenomicRanges)
+library(textshape)
+library(here)
+```
+
+### Make plots of coverage vs WPS, RNA expression, and Beta values
+```{r}
+tab <- readRDS(here('data/tss_cpg_connect_filled.rds')) %>%
+  column_to_rownames('trans') %>%
+  mutate(Coverage = log2(cov + 1)) %>%
+  mutate(RNA=log2(rna + 1)) %>%
+  mutate(WPS=wps) %>%
+  mutate(Beta=beta) %>%
+  mutate(Size=size) %>%
+  dplyr::filter(!is.na(WPS) & !is.na(Beta) & !is.na(RNA) & Size > 0) %>%
+  mutate(Methylated=Beta > 0.5) %>%
+  mutate(WPS=wps)
+
+ggplot(tab, aes(x=Coverage, y=RNA)) +
+  geom_point(size=0.5, color='grey') +
+  geom_density2d(color='black') +
+  theme_classic(base_size=20) +
+  xlab("Mean Coverage (Log2 CPM)") +
+  ylab("Mean Expression (Log2 CPM)")
+
+ggplot(tab, aes(y=WPS, x=Coverage)) +
+  geom_point(size=0.5, color='grey') +
+  geom_density2d(color='black') +
+  theme_classic(base_size=20) +
+  ylab("Mean Positioning Score") +
+  xlab("Mean Coverage (Log2 CPM)")
+
+breaks <- c(0.6, .8, 1, 1.5, 3, 6, 9)
+ggplot(tab, aes(y=Beta, x=cov)) +
+  geom_point(size=0.5, color='grey') +
+  geom_density2d(color='black') +
+  theme_classic(base_size=20) +
+  ylab("Mean Beta Value") +
+  xlab("Mean Coverage (CPM)") +
+  xlim(0, 2000)
+```

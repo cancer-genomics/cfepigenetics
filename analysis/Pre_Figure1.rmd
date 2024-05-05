@@ -1,0 +1,198 @@
+---
+title: "Pre_Figure1.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Prerequisites:
+
+In order to generate the plots from figure 1, we process the low coverage cfDNA sequencing data from 543 healthy individuals. We make a new folder for intermediary files, which will contain files too large to save on github
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/end_motifs_cfdna")
+dir.create("../../cfepigenetics_data/end_motifs_cfdna_individual")
+dir.create("../../cfepigenetics_data/end_motifs_sheared")
+dir.create("../../cfepigenetics_data/end_motifs_cfdna_individual_200over_5perc")
+dir.create("../../cfepigenetics_data/reads_per_tilebig")
+dir.create("../../cfepigenetics_data/reads_per_tilesmall")
+dir.create("../../cfepigenetics_data/cfdna_ratio_motif")
+```
+
+files to process:
+  *analysis/code/end_motifs_cfdna.sh* -> outputs "../../../cfepigenetics_data/end_motifs_cfdna"
+    Calculates for each position in the genome the amount of fragments starting, stopping and overlapping a bin that spans +/- 50 bases around that position.
+  *analysis/code/end_motifs_cfdna_individual.sh* -> outputs "../../../cfepigenetics_data/end_motifs_cfdna_individual"
+    Calculates the frequencies of motifs around all cfDNA-fragment ends.
+  *analysis/code/end_motifs_sheared.sh* -> outputs "../../../cfepigenetics_data/end_motifs_sheared"
+    Calculates the frequencies of motifs around sheared DNA-fragment ends.
+  *analysis/code/end_motifs_cfdna_individual_200over_5perc.sh* -> outputs "../../../cfepigenetics_data/end_motifs_cfdna_individual_200over_5perc"
+    Calculates the frequences of motifs around cfDNA-fragment ends, at conserved positions
+  *analysis/code/reads_per_tilebig.sh* -> outputs "../../../cfepigenetics_data/reads_per_tilebig"
+    Combines all reads from 543 healthy individuals in files spanning 5MB
+  *analysis/code/reads_per_tilesmall.sh* -> outputs "../../../cfepigenetics_data/reads_per_tilesmall"
+    Combines data on ratios for each location in the genome, which can be associated to motifs, nucleosome calling, etc
+  *analysis/code/cfdna_ratio_motif.sh* -> outputs "../../../cfepigenetics_data/cfdna_ratio_motif"
+    Contains information about motifs associated to preferred ends
+
+
+## Combine output from end_motifs_cfdna_individual.sh
+
+```{r}
+#collect all motifs
+letters_vec <- c("A", "C", "G", "T")
+# Use expand.grid to generate all combinations
+all_combinations <- expand.grid(letters_vec, letters_vec, letters_vec)
+# Rename the columns for clarity
+colnames(all_combinations) <- c("Letter1", "Letter2", "Letter3")
+# Print the result
+motifs <- paste0(all_combinations$Letter1, all_combinations$Letter2, all_combinations$Letter3)
+
+tb <- tibble()
+files <- list.files("../../cfepigenetics_data/end_motifs_cfdna_individual", full.names = T)
+for (file in files) {
+  temp <- readRDS(file)
+  temp <- temp[which(temp$Var1 %in% motifs),]
+  temp$id <- basename(file)
+  temp$group <- "normal_cfdna"
+  temp$FreqRatio <- temp$Freq / sum(temp$Freq)
+  tb <- rbind(tb, temp)
+}
+saveRDS(tb, "../data/end_motifs_cfdna_individual.rds")
+```
+
+
+## Get conserved positions (min amount of fragments overlapping a +/- 50bp-bin: 200; min amount of fragments start/ending: 5%). This is calculated from the output from end_motifs_cfdna.sh
+
+```{r}
+files <- list.files("../../cfepigenetics_data/end_motifs_cfdna", full.names = T)
+tb <- tibble()
+for (file in files) {
+  print(file)
+  temp <- readRDS(file)
+  temp <- temp[which(temp$over >= 200),]
+  
+  temp$start_perc <- temp$start / temp$over
+  temp$end_perc <- temp$end / temp$overg
+  temp_start <- temp[which(temp$start_perc >= 0.05),]
+  if (nrow(temp_start) > 0) {
+     temp_start$pos <- "start"
+     temp_start$motif <- as.character(getSeq(Hsapiens, GRanges(paste0(temp_start$seqnames, ":", temp_start$location - 1, "-", temp_start$location + 1), strand = "+")))
+  }
+  temp_end <- temp[which(temp$end_perc >= 0.05),]
+   if (nrow(temp_end) > 0) {
+     temp_end$pos <- "end"
+     temp_end$motif <- as.character(getSeq(Hsapiens, GRanges(paste0(temp_end$seqnames, ":", temp_end$location - 1, "-", temp_end$location + 1), strand = "-")))
+  }
+  
+  temp <- rbind(temp_start, temp_end)
+  temp <- as_tibble(temp)
+  tb <- rbind(tb, temp)
+  saveRDS(tb, "../../cfepigenetics_data/positons_conserved_200over_5perc.rds")
+}
+```
+
+
+## Combine output from end_motifs_cfdna_individual_200over_5perc.sh
+
+```{r}
+#collect all motifs
+letters_vec <- c("A", "C", "G", "T")
+# Use expand.grid to generate all combinations
+all_combinations <- expand.grid(letters_vec, letters_vec, letters_vec)
+# Rename the columns for clarity
+colnames(all_combinations) <- c("Letter1", "Letter2", "Letter3")
+# Print the result
+motifs <- paste0(all_combinations$Letter1, all_combinations$Letter2, all_combinations$Letter3)
+
+tb <- tibble()
+files <- list.files("../../cfepigenetics_data/end_motifs_cfdna_individual_200over_5perc", full.names = T)
+for (file in files) {
+  temp <- readRDS(file)
+  temp <- temp[which(temp$Var1 %in% motifs),]
+  temp$id <- basename(file)
+  temp$group <- "normal_cfdna"
+  temp$FreqRatio <- temp$Freq / sum(temp$Freq)
+  tb <- rbind(tb, temp)
+}
+saveRDS(tb, "../data/end_motifs_cfdna_individual_200over_5perc.rds")
+```
+
+
+## Find theoretical frequencies of motifs in hg19 (somatic and sex-chromosomes)
+
+```{r}
+#Find theoretical frequency of motifs
+tb <- tibble()
+
+#collect all motifs
+letters_vec <- c("A", "C", "G", "T")
+# Use expand.grid to generate all combinations
+all_combinations <- expand.grid(letters_vec, letters_vec, letters_vec)
+# Rename the columns for clarity
+colnames(all_combinations) <- c("Letter1", "Letter2", "Letter3")
+# Print the result
+motifs <- paste0(all_combinations$Letter1, all_combinations$Letter2, all_combinations$Letter3)
+
+for (motif in motifs) {
+  print(motif)
+  temp_gr <- vmatchPattern(motif, Hsapiens)
+  temp_gr <- temp_gr[which(seqnames(temp_gr) %in% paste0("chr", c(1:22, "X", "Y")))]
+  temp_tb <- tibble("motif" = motif,
+                    "num" = length(temp_gr))
+  tb <- rbind(tb, temp_tb)
+}
+tb$freq <- tb$num / sum(tb$num)
+saveRDS(tb, "../data/theoretical_frequencies_hg19.rds")
+```
+
+
+## Find frequencies of motifs from sheared samples
+
+```{r}
+#Find theoretical frequency of motifs
+tb <- tibble()
+
+#collect all motifs
+letters_vec <- c("A", "C", "G", "T")
+# Use expand.grid to generate all combinations
+all_combinations <- expand.grid(letters_vec, letters_vec, letters_vec)
+# Rename the columns for clarity
+colnames(all_combinations) <- c("Letter1", "Letter2", "Letter3")
+# Print the result
+motifs <- paste0(all_combinations$Letter1, all_combinations$Letter2, all_combinations$Letter3)
+
+files <- list.files("../../cfepigenetics_data/end_motifs_sheared", full.names = T)
+for (file in files) {
+  temp <- readRDS(file)
+  temp <- temp[which(temp$Var1 %in% motifs),]
+  temp$id <- basename(file)
+  temp$FreqRatio <- temp$Freq / sum(temp$Freq)
+  tb <- rbind(tb, temp)
+}
+
+saveRDS(tb, "../data/end_motifs_sheared_individual.rds")
+```
+
+
+## Combine the data from cfdna_ratio_motif.sh
+
+```{r}
+files <- list.files("../../cfepigenetics_data/cfdna_ratio_motif", full.names = T)
+done <- c()
+all <- tibble()
+for (file in files) {
+  print(paste0(match(file, files), "/", length(files)))
+  if (!(basename(file) %in% done)) {
+    done <- c(done, basename(file))
+    temp <- readRDS(file)
+    all <- rbind(all, temp)
+    all <- all %>% 
+      group_by(motif, ratio) %>%
+      summarise(num = sum(num))
+  }
+}
+all <- all[-grep("N", all$motif),]
+saveRDS(all, "../data/cfdna_ratio_motif.rds")
+```

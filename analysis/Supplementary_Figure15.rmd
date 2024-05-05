@@ -1,0 +1,48 @@
+### Required Libraries
+```{r}
+library(tidyverse)
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+library(here)
+```
+
+### Generate plots
+```{r, fig.height=4}
+# Read in data
+beta_dat <- readRDS(here('data/giraffe/beta_dat.RDS'))
+rna_dat <- readRDS(here('data/giraffe/rna_dat.RDS'))
+
+# Prep for plotting
+comps <- list(
+    c('WB', 'BRCA'),
+    c('WB', 'COAD'),
+    c('WB', 'LIHC'),
+    c('WB', 'LUAD'),
+    c('WB', 'LUSC'),
+    c('WB', 'OV'),
+    c('WB', 'PAAD')
+)
+
+stats_fxn <- function(x, lab_height){
+    size <- max(x)-min(x)
+    data.frame(y=lab_height, label=length(x))
+}
+
+# Make plots
+scale <- max(rna_dat$Expressed.Genes) - min(rna_dat$Expressed.Genes)
+lab_height <- min(rna_dat$Expressed.Genes) - scale*.05
+ggboxplot(rna_dat, x='Type', y='Expressed.Genes', fill='Type', 
+        add='jitter') +
+    xlab('') +
+    ylab('Expressed Genes (count)') +
+    theme(legend.position='none')
+
+scale <- max(beta_dat$Methylated.Sites) - min(beta_dat$Methylated.Sites)
+lab_height <- min(beta_dat$Methylated.Sites) - scale*.05
+ggboxplot(beta_dat, x='Type', y='Methylated.Sites', fill='Type', 
+        add='jitter') +
+    xlab('') +
+    ylab('Methylated Sites (count)') +
+    theme(legend.position='none')
+```

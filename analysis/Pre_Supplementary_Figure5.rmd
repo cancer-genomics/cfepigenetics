@@ -1,0 +1,35 @@
+---
+title: "Supplementary_Figure5.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/healthy_cpggroups")
+```
+
+
+## Process the data
+
+*analysis/code/healthy_cpggroups.sh* -> outputs "../../healthy_cpggroups"
+    Collect information on fragments starting / ending at CpG's, summarized by motifs around the CpGs and subdivided per CpG-islands, shores, shelves and open sea.
+  
+
+## Construct files with metrics of fragment starting and ending around motifs
+
+```{r}
+files <- list.files("../../cfepigenetics_data/healthy_cpggroups", full.names = T)
+t <- tibble()
+for (file in files) {
+  print(basename(file))
+  temp <- readRDS(file)
+  t <- rbind(t, temp)
+}
+t <- t %>% 
+  group_by(group, beta, motif) %>%
+  summarise(start_all = sum(start), over_all = sum(over))
+t$ratio <- t$start_all / t$over_all
+saveRDS(t, "../data/healthy_cpggroups.rds")
+``` 

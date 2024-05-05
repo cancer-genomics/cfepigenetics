@@ -1,0 +1,370 @@
+---
+title: "Figure1.rmd"
+author: "Michael Noe"
+date: "2024-01-18"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Figure 1. 
+
+```{r}
+library("tidyverse")
+library("ggplot2")
+library("annotatr")
+library("cowplot")
+library("data.table")
+library("GenomicRanges")
+```
+
+## Figure 1A
+
+```{r}
+total <- readRDS("../data/end_motifs_cfdna_individual.rds")
+enri <- readRDS("../data/end_motifs_cfdna_individual_200over_5perc.rds")
+shea <- readRDS("../data/end_motifs_sheared_individual.rds")
+theo <- readRDS("../data/theoretical_frequencies_hg19.rds")
+theo$motif <- paste0(substr(theo$motif,1,1), " | ", substr(theo$motif,2,3))
+test <- total %>%
+  group_by(Var1, group) %>%
+  summarise(mean = mean(FreqRatio))
+
+test$Var1 <-  paste0(substr(test$Var1,1,1), " | ", substr(test$Var1,2,3))
+total$Var1 <- paste0(substr(total$Var1,1,1), " | ", substr(total$Var1,2,3))
+enri$Var1 <- paste0(substr(enri$Var1,1,1), " | ", substr(enri$Var1,2,3))
+shea$Var1 <- paste0(substr(shea$Var1,1,1), " | ", substr(shea$Var1,2,3))
+total$totheo <- 0
+test$totheo <- 0
+enri$totheo <- 0
+shea$totheo <- 0
+
+mean(total[which(total$Var1 == "A | CC"),]$FreqRatio) + mean(total[which(total$Var1 == "T | CC"),]$FreqRatio)
+mean(total[which(total$Var1 == "A | CG"),]$FreqRatio) + mean(total[which(total$Var1 == "T | CG"),]$FreqRatio)
+mean(enri[which(enri$Var1 == "A | CC"),]$FreqRatio) + mean(enri[which(enri$Var1 == "T | CC"),]$FreqRatio)
+mean(enri[which(enri$Var1 == "A | CG"),]$FreqRatio) + mean(enri[which(enri$Var1 == "T | CG"),]$FreqRatio)
+
+for (i in as.character(unique(total$Var1))) {
+  total[which(total$Var1 == i),]$totheo <- total[which(total$Var1 == i),]$FreqRatio / theo[which(theo$motif == i),]$freq
+  test[which(test$Var1 == i),]$totheo <- test[which(test$Var1 == i),]$mean / theo[which(theo$motif == i),]$freq
+  enri[which(enri$Var1 == i),]$totheo <- enri[which(enri$Var1 == i),]$FreqRatio / theo[which(theo$motif == i),]$freq
+  shea[which(shea$Var1 == i),]$totheo <- shea[which(shea$Var1 == i),]$FreqRatio / theo[which(theo$motif == i),]$freq
+}
+
+enri$group <- "cfDNA at preferred sequences"
+shea$group <- "sonicated DNA"
+shea <- shea[,c(1,2,3,6,4,5)]
+colnames(enri) <- c("Var1", "Freq", "id", "group", "FreqRatio", "totheo")
+test2 <- test[which(test$group == "normal_cfdna"),]
+test2 <- test2[order(-test2$totheo),]
+
+total[which(total$group == "normal_cfdna"), ]$group <- "cfDNA"
+total <- rbind(total, enri, shea)
+total$Var1 <- factor(total$Var1, levels = as.character(test2$Var1))
+total$group <- factor(total$group, levels = c("cfDNA at preferred sequences", "cfDNA", "sonicated DNA"))
+
+
+mean(c(mean(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 == "A | CC")),]$totheo),
+     mean(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 == "T | CC")),]$totheo)))
+
+mean(c(mean(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 == "A | CG")),]$totheo),
+     mean(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 == "T | CG")),]$totheo)))
+
+t.test(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 %in% c("A | CC", "T | CC", "A | CG", "T | CG"))),]$FreqRatio, theo[which(theo$motif %in% c("A | CC", "T | CC", "A | CG", "T | CG")),]$freq)
+t.test(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 %in% c("A | CC"))),]$FreqRatio, mu = theo[which(theo$motif %in% c("A | CC")),]$freq)
+t.test(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 %in% c("T | CC"))),]$FreqRatio, mu = theo[which(theo$motif %in% c("T | CC")),]$freq)
+t.test(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 %in% c("A | CG"))),]$FreqRatio, mu = theo[which(theo$motif %in% c("A | CG")),]$freq)
+t.test(total[which((total$group == "cfDNA at preferred sequences") & (total$Var1 %in% c("T | CG"))),]$FreqRatio, mu = theo[which(theo$motif %in% c("T | CG")),]$freq)
+
+plot1A_plot <- ggplot(total, aes(y=totheo, x=Var1, color=group)) +
+  geom_point(position = position_dodge(width = 0), alpha=0.2, aes(color=group), size=0.1) +
+  geom_boxplot(outlier.shape = NA, alpha=0.5, position = position_dodge(width = 0)) +
+  scale_color_manual(values=c("#004766", "#4FB553", "#ff8c00"),
+                      breaks = c("cfDNA at preferred sequences", "cfDNA", "sonicated DNA"),
+                      labels= c("cfDNA at preferred ends", "cfDNA", "sheared")) + 
+  #scale_fill_manual(values=c("#77C8DD", "#77dd77", "black")) + 
+  theme_classic(base_size = 20) +
+  scale_y_continuous(breaks = c(1,10,20,30),
+                     limits = c(0,36.16585)
+                     ) +  
+  ylab("Frequency of end motif sequences to\ntheoretical genomic representation") +
+  xlab("End motif sequences") +
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1),
+        text = element_text(size=16),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0)),
+        #axis.title.x = element_blank(),
+        #axis.text.x.bottom = element_text(margin = margin(b = 0, t=0, r=0, l=0)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 20)),
+        legend.position = c(.5, .80),
+        plot.margin = unit(c(2,1,0,1), "cm")
+        )
+
+n_table_1 <- data.frame("nucleotide" =  substr(as.character(test2$Var1), 1, 1),
+                        "position_row" = 1,
+                        "position_column" = c(1:64))
+n_table_2 <- data.frame("nucleotide" =  substr(as.character(test2$Var1),  5, 5),
+                        "position_row" = 2,
+                        "position_column" = c(1:64))
+n_table_3 <- data.frame("nucleotide" =  substr(as.character(test2$Var1),  6, 6),
+                        "position_row" = 3,
+                        "position_column" = c(1:64))
+nucleotide_table <- rbind(n_table_1, n_table_2, n_table_3)
+nucleotide_table$nucleotide <- factor(nucleotide_table$nucleotide, levels = c("A", "T", "C", "G"))
+plot1A_axis <- ggplot(nucleotide_table, aes(x=position_column, y=position_row)) +
+  geom_tile(aes(fill=nucleotide)) +
+  theme_classic() +
+  theme(text = element_text(size=16),
+        axis.line = element_blank(),
+        axis.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        legend.position = "bottom",
+        legend.title=element_blank(),
+        panel.border = element_blank()) + 
+  scale_x_discrete(expand=c(0,0))+
+  scale_y_discrete(expand=c(0,0))+
+  scale_fill_manual(values= c("#77dd77", "#00660a", "#0288D1", "#0D47A1"))
+plot1A <- plot_grid(plot1A_plot, plot1A_axis, nrow=2, rel_heights = c(1,0.2), label_size = 20, align = "v")
+#ggsave(paste("../output_final/temp_preferredcfDNA_cfDNA_sheared.jpg"), plot = plot1A, device = "jpeg",width = 20, height=12,units = "in", dpi=300, scale = 0.8)
+
+
+
+plot1A_plot <- ggplot(total[which(total$Var1 %in% c("A | CC", "T | CC", "A | CG", "T | CG", "C | CC", "T | CA", "T | TG", "G | CC", "A | TG", "T | GC", "A | CA", "A | GC", "T | TA", "A | TA", "A | CT", "T | GG", "T | TC")),], aes(y=totheo, x=Var1, color=group)) +
+  geom_point(position = position_dodge(width = 0), alpha=0.2, aes(color=group), size=0.1) +
+  geom_boxplot(outlier.shape = NA, alpha=0.5, position = position_dodge(width = 0)) +
+  scale_color_manual(values=c("#004766", "#4FB553", "#ff8c00"),
+                      breaks = c("cfDNA at preferred sequences", "cfDNA", "sonicated DNA"),
+                      labels= c("cfDNA at preferred ends", "cfDNA", "sheared")) + 
+  #scale_fill_manual(values=c("#77C8DD", "#77dd77", "black")) + 
+  theme_classic(base_size = 20) +
+  scale_y_continuous(breaks = c(1,10,20,30),
+                     limits = c(0,36.16585)
+                     ) +  
+  ylab("Frequency of end motif sequences to\ntheoretical genomic representation") +
+  xlab("End motif sequences") +
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1),
+        text = element_text(size=16),
+        legend.title = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 20, l = 0)),
+        #axis.title.x = element_blank(),
+        #axis.text.x.bottom = element_text(margin = margin(b = 0, t=0, r=0, l=0)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 20)),
+        legend.position = c(.5, .80),
+        plot.margin = unit(c(2,1,0,1), "cm")
+        )
+```
+
+## Figure 1B
+
+```{r}
+combination_all <- readRDS("../data/cfdna_ratio_motif.rds")
+combination <- combination_all[which(nchar(combination_all$motif) == 3),]
+
+combin <- tibble()
+for (i in unique(combination$motif)) {
+  temp <- combination[which(combination$motif == i),]
+  temp <- temp[which(temp$ratio <= 0.638),]
+  new <- tibble(motif = i,
+                ratio = seq(0, 0.638, 0.0001))
+  new$num <- 0
+  new$num <- as.numeric(NA)
+  new[match(as.character(temp$ratio), as.character(new$ratio)),]$num <- as.numeric(temp$num)
+  new$num <- nafill(new$num,"const", fill=0)
+  combin <- rbind(combin, new)
+}
+#cfdna_ratios <- combin[which(combin$ratio >= 0.06),c(1,3)] %>%
+#  group_by(motif) %>%
+#  summarise_all(funs(sum(., na.rm = FALSE))) %>%
+#  mutate(freq = num / sum(num))
+
+combin <- combin %>%
+  dplyr::group_by(ratio) %>%
+  mutate(freq = num / sum(num))
+
+combin$motif_group <- "rest motifs"
+combin[which(combin$motif == "ACC"),]$motif_group <- "A | CC"
+combin[which(combin$motif == "TCC"),]$motif_group <- "T | CC"
+combin[which(combin$motif == "ACG"),]$motif_group <- "A | CG"
+combin[which(combin$motif == "TCG"),]$motif_group <- "T | CG"
+combin$motif_group <- factor(combin$motif_group, levels = c("rest motifs", "T | CG", "A | CG", "T | CC", "A | CC"))
+plot <- combin[,c(5,2,3,4)] %>%
+  group_by(motif_group,ratio) %>%
+  summarise_each(funs(sum))
+plot <- plot[which(plot$ratio <= 0.3),]
+
+dat <- plot
+ratios <- dat %>%
+    group_by(motif_group) %>%
+    summarize(min=min(ratio),
+              max=max(ratio))
+newx <- data.frame(ratio=seq(0, 0.3, by=0.001))
+smoother <- function(df, span=3/4, newx){
+    fit <- loess(freq~ratio, df, span=span)
+    pred <- predict(fit, newdata=newx)
+    pred <- tibble(ratio=newx$ratio, freq=pred)
+    pred
+}
+span <- 1/10
+dat2 <- dat %>%
+    filter(ratio <= 0.3) %>%
+    group_by(motif_group) %>%
+    nest()
+dat2$smoothed <- map(dat2$data, smoother, newx=newx, span=span)
+dat3 <- unnest(dat2, "smoothed")
+
+plot <- dat3
+dat4 <- dat3 %>%
+    ungroup() %>%
+    group_by(ratio) %>%
+    mutate(freq=freq/sum(freq)) %>%
+    ungroup() %>%
+    group_by(motif_group)
+plot<- dat4
+dat5 <- dat4 %>%
+    ungroup() %>%
+    mutate(motif_group=fct_rev(motif_group))
+plot <- dat5
+dat6 <- dat5 %>%
+    filter(motif_group != "rest motifs") %>%
+    mutate(motif_group=droplevels(motif_group))
+dat.list <- dat6 %>%
+    mutate(ymin=0, ymax=freq) %>%
+    dplyr::select(-data) %>%
+    group_by(motif_group) %>%
+    nest()
+names(dat.list$data) <- dat.list$motif_group
+## for T|CC, the minimum is the frequency of A|CC
+##           the maximum is the frequency of T|CC + frequency of A|CC
+tmp <- dat.list$data[["T | CC"]] %>%
+    mutate(ymin=dat.list$data[["A | CC"]]$ymax,
+           ymax=freq + ymin)
+dat.list$data[["T | CC"]] <- tmp
+## for A|CG, the minimum is the ymax of T|CC
+##           the maximum is the frequency of A|CG + ymin
+tmp <- dat.list$data[["A | CG"]] %>%
+    mutate(ymin=dat.list$data[["T | CC"]]$ymax,
+           ymax=freq + ymin)
+dat.list$data[["A | CG"]] <- tmp
+tmp <- dat.list$data[["T | CG"]] %>%
+    mutate(ymin=dat.list$data[["A | CG"]]$ymax,
+           ymax=freq + ymin)
+dat.list$data[["T | CG"]] <- tmp
+dat7 <- dat.list %>%
+    unnest("data")
+ylabel <- "Probability of end motif sequence"
+plot1B <- dat7 %>%
+     ggplot(aes(x = ratio, y=freq, fill = motif_group)) +
+     geom_ribbon(aes(ymin=ymin, ymax=ymax, fill=motif_group)) +
+     scale_fill_manual("", values = c("A | CC" = "#77C8DD", "T | CC" = "#004766", "A | CG" = "#77dd77", "T | CG" = "#00660a", "rest motifs" = "white"), breaks = c("T | CG", "A | CG", "T | CC", "A | CC")) +
+     ylab(ylabel) +
+     xlab("Preferrence of position for cfDNA ends (%)") +
+     theme_classic(base_size=20) +
+     theme(text = element_text(size=16),
+           axis.title.y = element_text(margin = margin(r = 20, l = 0)),
+           axis.title.x = element_text(margin = margin(t = 20, b = 20)),
+           legend.position = c(0.2,0.8),
+           legend.title = element_blank(),
+           plot.margin = unit(c(1,1,1,1), "cm")) +
+     scale_y_continuous(limits=c(0, 1)) +
+     scale_x_continuous(labels = scales::percent, limits = c(0,0.15), expand = c(0, 0.005))
+
+#ggsave(paste("../output_final/temp_cfdna_ratio_motif.jpg"), plot = plot1B, device = "jpeg",width = 20, height=12,units = "in", dpi=300, scale = .8)
+```
+
+## Figure 1C
+
+```{r}
+file <- "../data/positons_conserved_200over_5perc.rds"
+meth_file <- "../data/Moss_ratios.rds"
+t <- readRDS(file)
+m <- readRDS(meth_file)
+t$perc <- 0
+t[which(t$pos == "start"),]$perc <- t[which(t$pos == "start"),]$start_perc
+t[which(t$pos == "end"),]$perc <- t[which(t$pos == "end"),]$end_perc
+tgr <- GRanges(paste0(t$seqnames, ":", t$location))
+tgr$atcc <- 0
+tgr$atcg <- 0
+tgr[c(which((t$pos == "start") & (t$motif %in% c("ACC", "TCC"))), which((t$pos == "end") & (t$motif %in% c("GGT", "GGA"))))]$atcc <- 1
+tgr[c(which((t$pos == "start") & (t$motif %in% c("ACG", "TCG"))), which((t$pos == "end") & (t$motif %in% c("CGT", "CGA"))))]$atcg <- 1
+m <- m[,c(2,3,5)]
+mgr <- GRanges(paste0(m$chr, ":", m$pos))
+mgr$beta <- m$beta
+
+aoi <- builtin_annotations()
+aoi <- aoi[grep("hg19", aoi)]
+aoi <- aoi[-c(grep("Nhlf", aoi), grep("Nhek", aoi), grep("Huvec", aoi), grep("Hsmm", aoi), grep("Gm12878", aoi), grep("H1hesc", aoi), grep("Hepg2", aoi), grep("Hmec", aoi))]
+aoi <- aoi[-which(aoi == "hg19_lncrna_gencode")]
+annotations = build_annotations(genome = 'hg19', annotations = aoi)
+annotations <- annotations[which(seqnames(annotations) %in% c(paste0("chr", c(1:22))))]
+o <- as_tibble(findOverlaps(mgr, annotations))
+o$beta <- mgr[o$queryHits]$beta
+o <- o %>%
+  group_by(subjectHits) %>%
+  summarise(beta = mean(beta))
+annotations$beta <- 2
+annotations[o$subjectHits,]$beta <- o$beta
+annotations_lowbeta <- annotations[which(annotations$beta <= 0.3),]
+annotations_highbeta <- annotations[which(annotations$beta >= 0.7),]
+annotations_lowbeta$type <- paste0(annotations_lowbeta$type, "_unmeth")
+annotations_highbeta$type <- paste0(annotations_highbeta$type, "_meth")
+annotations$group2 <- "all"
+annotations_lowbeta$group2 <- "unmethylated"
+annotations_highbeta$group2 <- "methylated"
+annotations <- c(annotations, annotations_lowbeta, annotations_highbeta)
+
+annotations <- annotations[which(annotations$group2 == "all")]
+annotations$group3 <- "NA"
+annotations[which(annotations$type == "hg19_genes_intergenic")]$group3 <- "Intergenic"
+annotations[which(annotations$type == "hg19_cpg_inter")]$group3 <- "CpG - open sea"
+annotations[which(annotations$type == "hg19_cpg_islands")]$group3 <- "CpG - islands"
+
+annotations[which(annotations$type == "hg19_genes_firstexons")]$group3 <- "First exon"
+annotations[which(annotations$type == "hg19_genes_exons")]$group3 <- "Exons"
+annotations[which(annotations$type == "hg19_genes_introns")]$group3 <- "Introns"
+
+annotations[which(annotations$type == "hg19_genes_promoters")]$group3 <- "Promoters"
+annotations[which(annotations$type == "hg19_enhancers_fantom")]$group3 <- "Enhancers"
+o <- findOverlaps(tgr, annotations)
+o <- as_tibble(o)
+ot <- table(o$subjectHits)
+annotations$recur <- 0
+annotations[as.numeric(as.character(names(ot)))]$recur <- as.numeric(ot)
+annotations$frequency <- annotations$recur / width(annotations)
+annot <- as_tibble(annotations)
+annot_sum <- annot %>%
+  group_by(group3) %>%
+  summarise(frequency = mean(frequency))
+annot_sum <- annot_sum[order(-annot_sum$frequency),]
+annot_sum$group3 <- factor(annot_sum$group3, levels = c(annot_sum$group3))
+annotations$group3 <- factor(annotations$group3, levels = c(annot_sum$group3))
+
+plot1C <- ggplot(annot_sum[which(annot_sum$group3 %in% c("First exon", "CpG - islands", "Promoters", "Intergenic", "CpG - open sea", "Exons", "Introns", "Enhancers")),], aes(x=group3, y=frequency, fill=frequency)) +
+  geom_bar(stat = "identity") +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1)) +
+  ylab("Frequency of preferred ends") +
+  xlab("") +
+  theme(axis.text.x = element_text(angle = 90, vjust=0.5, hjust=1),
+        text = element_text(size=16),
+        legend.title = element_blank(),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        axis.title.x = element_blank(),
+        plot.margin = unit(c(2,1,0.5,1), "cm"),
+        strip.background = element_blank()
+        ) +
+  scale_fill_gradient(low =  "#004766", high = "#77c8dd") + 
+  scale_y_continuous(labels = scales::percent)
+
+#ggsave(paste("../output_final/recurrent_pos_groups2.jpg"), plot = plot1C, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+```
+
+
+## Figure 1: combine Figure 1A, Figure 1B, Figure 1C
+
+```{r}
+plot_combi1BCD <- plot_grid(plot1B, plot1C, NULL, ncol=3, rel_widths = c(1,1,1), labels=c("b", "c", "d"), label_size = 20, align = "v")
+plot_combi1ABCD <- plot_grid(plot1A, plot_combi1BCD, nrow=2, rel_heights = c(1,1), labels=c('a', ''), label_size = 20)
+ggsave(paste("../output/Fig_1.jpg"), plot = plot_combi1ABCD, device = "jpeg",width =180, height=108, units = "mm", dpi=600, bg = "white", scale = 3)
+```

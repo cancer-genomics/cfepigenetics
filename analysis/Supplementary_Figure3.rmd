@@ -1,0 +1,263 @@
+---
+title: "Supplementary_Figure3.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 3.
+
+```{r}
+library("ggplot2")
+library("lemon")
+library("cowplot")
+```
+
+
+## Supplementary Figure 3A: 
+
+```{r}
+m <- readRDS("../data/diff_startfrags_3bp.rds")
+acg_m <- data.frame("motif" = "ACG",
+                     "counts" = m[1,] + m[2,],
+                     "rel_counts" = ((m[1,] + m[2,]) / sum((m[1,] + m[2,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+ccg_m <- data.frame("motif" = "CCG",
+                     "counts" = m[3,] + m[4,],
+                     "rel_counts" = ((m[3,] + m[4,]) / sum((m[3,] + m[4,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+gcg_m <- data.frame("motif" = "GCG",
+                     "counts" = m[5,] + m[6,],
+                     "rel_counts" = ((m[5,] + m[6,]) / sum((m[5,] + m[6,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+tcg_m <- data.frame("motif" = "TCG",
+                     "counts" = m[7,] + m[8,],
+                     "rel_counts" = ((m[7,] + m[8,]) / sum((m[7,] + m[8,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+acg_u <- data.frame("motif" = "ACG",
+                     "counts" = m[9,] + m[10,],
+                     "rel_counts" = ((m[9,] + m[10,]) / sum((m[9,] + m[10,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+ccg_u <- data.frame("motif" = "CCG",
+                     "counts" = m[11,] + m[12,],
+                     "rel_counts" = ((m[11,] + m[12,]) / sum((m[11,] + m[12,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+gcg_u <- data.frame("motif" = "GCG",
+                     "counts" = m[13,] + m[14,],
+                     "rel_counts" = ((m[13,] + m[14,]) / sum((m[13,] + m[14,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+tcg_u <- data.frame("motif" = "TCG",
+                     "counts" = m[15,] + m[16,],
+                     "rel_counts" = ((m[15,] + m[16,]) / sum((m[15,] + m[16,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+acg_d <- data.frame("motif" = "ACG",
+                     "counts" = (m[9,] + m[10,]) - (m[1,] + m[2,]),
+                     "rel_counts" = - (((m[9,] + m[10,]) / sum((m[9,] + m[10,]))) * 51) + (((m[1,] + m[2,]) / sum((m[1,] + m[2,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+ccg_d <- data.frame("motif" = "CCG",
+                     "counts" = (m[11,] + m[12,]) - (m[3,] + m[4,]),
+                     "rel_counts" = - (((m[11,] + m[12,]) / sum((m[11,] + m[12,]))) * 51) + (((m[3,] + m[4,]) / sum((m[3,] + m[4,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+gcg_d <- data.frame("motif" = "GCG",
+                     "counts" = (m[13,] + m[14,]) - (m[5,] + m[6,]),
+                     "rel_counts" = - (((m[13,] + m[14,]) / sum((m[13,] + m[14,]))) * 51) + (((m[5,] + m[6,]) / sum((m[5,] + m[6,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+tcg_d <- data.frame("motif" = "TCG",
+                     "counts" = (m[15,] + m[16,]) - (m[7,] + m[8,]),
+                     "rel_counts" = - (((m[15,] + m[16,]) / sum((m[15,] + m[16,]))) * 51) + (((m[7,] + m[8,]) / sum((m[7,] + m[8,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+
+all <- rbind(acg_m, acg_u, acg_d,
+             ccg_m, ccg_u, ccg_d,
+             gcg_m, gcg_u, gcg_d,
+             tcg_m, tcg_u, tcg_d)
+
+all$meth <- factor(all$meth, levels=c("Unmethylated", "Methylated", "Difference"))
+all$scale <- all$pos
+all[which(all$scale %in% c(0,1)),]$scale <- "C"
+all[which(all$scale == 2),]$scale <- "G"
+all[which((all$motif == "ACG") & (all$scale == -1)),]$scale <- "A"
+all[which((all$motif == "CCG") & (all$scale == -1)),]$scale <- "C"
+all[which((all$motif == "GCG") & (all$scale == -1)),]$scale <- "G"
+all[which((all$motif == "TCG") & (all$scale == -1)),]$scale <- "T"
+all <- all[which(all$pos %in% c(-19:21)),]
+all$pos <- factor(all$pos, levels = c(-19:21))
+all$motif <- factor(all$motif, levels = c("CCG", "GCG","ACG", "TCG"))
+
+p <- ggplot(all, aes(x=pos, y=rel_counts, fill=meth)) +
+  geom_bar(stat="identity") +
+  scale_fill_manual(values=c("#77C8DD", "#004766", "#c3775d")) +
+  facet_grid(meth~motif, scales = "free_y") + 
+  coord_capped_cart(bottom='both') +
+  theme_classic(base_size = 20) +
+  theme(#axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.text.x = element_text(size=11),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 20)),
+        strip.text.x = element_text(size = 11, hjust = 0.5)) +
+  scale_y_continuous(name = "Amount of cfDNA fragments starting (normalized)") +
+  scale_x_discrete(name ="Position around motif",
+                  breaks=c(-19,-9,0,1,2,11,21),
+                  labels=c("-20", "-10", "A", "C", "G", "10", "20")
+                  ) +
+  geom_vline(aes(xintercept=19.5), linetype=2) +
+  geom_vline(aes(xintercept=22.5), linetype=2)
+
+gt <- ggplotGrob(p)
+gt$grobs[[18]]$children[[2]]$grobs[[2]]$children[[1]]$label <- 
+  c("-20","-10","C","C","G","10","20")
+gt$grobs[[19]]$children[[2]]$grobs[[2]]$children[[1]]$label <- 
+  c("-20","-10","G","C","G","10","20")
+gt$grobs[[20]]$children[[2]]$grobs[[2]]$children[[1]]$label <- 
+  c("-20","-10","A","C","G","10","20")
+gt$grobs[[21]]$children[[2]]$grobs[[2]]$children[[1]]$label <- 
+  c("-20","-10","T","C","G","10","20")
+
+ga <- ggplotify::as.ggplot(gt)
+
+#ggsave(paste("../output/Supplementary_Fig_3_3bp.jpg"), plot =ga, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+```
+
+
+## Supplementary Figure 3B:
+
+```{r}
+m <- readRDS("../data/diff_startfrags_4bp.rds")
+accg_m <- data.frame("motif" = "ACCG",
+                     "counts" = m[1,] + m[2,],
+                     "rel_counts" = ((m[1,] + m[2,]) / sum((m[1,] + m[2,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+cccg_m <- data.frame("motif" = "CCCG",
+                     "counts" = m[3,] + m[4,],
+                     "rel_counts" = ((m[3,] + m[4,]) / sum((m[3,] + m[4,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+gccg_m <- data.frame("motif" = "GCCG",
+                     "counts" = m[5,] + m[6,],
+                     "rel_counts" = ((m[5,] + m[6,]) / sum((m[5,] + m[6,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+tccg_m <- data.frame("motif" = "TCCG",
+                     "counts" = m[7,] + m[8,],
+                     "rel_counts" = ((m[7,] + m[8,]) / sum((m[7,] + m[8,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Methylated")
+accg_u <- data.frame("motif" = "ACCG",
+                     "counts" = m[9,] + m[10,],
+                     "rel_counts" = ((m[9,] + m[10,]) / sum((m[9,] + m[10,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+cccg_u <- data.frame("motif" = "CCCG",
+                     "counts" = m[11,] + m[12,],
+                     "rel_counts" = ((m[11,] + m[12,]) / sum((m[11,] + m[12,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+gccg_u <- data.frame("motif" = "GCCG",
+                     "counts" = m[13,] + m[14,],
+                     "rel_counts" = ((m[13,] + m[14,]) / sum((m[13,] + m[14,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+tccg_u <- data.frame("motif" = "TCCG",
+                     "counts" = m[15,] + m[16,],
+                     "rel_counts" = ((m[15,] + m[16,]) / sum((m[15,] + m[16,]))) * 51,
+                     "pos" = c(-25:25),
+                     "meth" = "Unmethylated")
+accg_d <- data.frame("motif" = "ACCG",
+                     "counts" = (m[9,] + m[10,]) - (m[1,] + m[2,]),
+                     "rel_counts" = - (((m[9,] + m[10,]) / sum((m[9,] + m[10,]))) * 51) + (((m[1,] + m[2,]) / sum((m[1,] + m[2,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+cccg_d <- data.frame("motif" = "CCCG",
+                     "counts" = (m[11,] + m[12,]) - (m[3,] + m[4,]),
+                     "rel_counts" = - (((m[11,] + m[12,]) / sum((m[11,] + m[12,]))) * 51) + (((m[3,] + m[4,]) / sum((m[3,] + m[4,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+gccg_d <- data.frame("motif" = "GCCG",
+                     "counts" = (m[13,] + m[14,]) - (m[5,] + m[6,]),
+                     "rel_counts" = - (((m[13,] + m[14,]) / sum((m[13,] + m[14,]))) * 51) + (((m[5,] + m[6,]) / sum((m[5,] + m[6,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+tccg_d <- data.frame("motif" = "TCCG",
+                     "counts" = (m[15,] + m[16,]) - (m[7,] + m[8,]),
+                     "rel_counts" = - (((m[15,] + m[16,]) / sum((m[15,] + m[16,]))) * 51) + (((m[7,] + m[8,]) / sum((m[7,] + m[8,]))) * 51),
+                     "pos" = c(-25:25),
+                     "meth" = "Difference")
+
+all <- rbind(accg_m, accg_u, accg_d,
+             cccg_m, cccg_u, cccg_d,
+             gccg_m, gccg_u, gccg_d,
+             tccg_m, tccg_u, tccg_d)
+
+all$meth <- factor(all$meth, levels=c("Unmethylated", "Methylated", "Difference"))
+all$scale <- all$pos
+all[which(all$scale %in% c(-25:-21, -19:-11, -9:-2, 3:9, 11:19, 21:25)),]$scale <- ""
+all[which(all$scale %in% c(0,1)),]$scale <- "C"
+all[which(all$scale == 2),]$scale <- "G"
+all[which((all$motif == "ACCG") & (all$scale == -1)),]$scale <- "A"
+all[which((all$motif == "CCCG") & (all$scale == -1)),]$scale <- "C"
+all[which((all$motif == "GCCG") & (all$scale == -1)),]$scale <- "G"
+all[which((all$motif == "TCCG") & (all$scale == -1)),]$scale <- "T"
+all <- all[which(all$pos %in% c(-20:20)),]
+all$pos <- factor(all$pos, levels = c(-20:20))
+all$motif <- factor(all$motif, levels = c("CCCG", "GCCG","ACCG", "TCCG"))
+
+p <- ggplot(all, aes(x=pos, y=rel_counts, fill=meth)) +
+  geom_bar(stat="identity") +
+  scale_fill_manual(values=c("#77C8DD", "#004766", "#c3775d")) +
+  facet_grid(meth~motif, scales = "free_y") + 
+  coord_capped_cart(bottom='both') +
+  theme_classic(base_size = 20) +
+  theme(#axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        axis.text.x = element_text(size=11),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        panel.spacing = unit(2, "lines"),
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 20)),
+        strip.text.x = element_text(size = 11, hjust = 0.513)) +
+  scale_y_continuous(name = "Amount of cfDNA fragments starting (normalized)") +
+  scale_x_discrete(name ="Position around motif",
+                  breaks=c(-20,-10,-1,0,1,2,10,20),
+                  labels=c("-20", "-10", "A", "C", "C", "G", "10", "20")
+                  ) +
+  geom_vline(aes(xintercept=19.5), linetype=2) +
+  geom_vline(aes(xintercept=23.5), linetype=2)
+
+gt <- ggplotGrob(p)
+gt$grobs[[18]]$children[[2]]$grobs[[2]]$children[[1]]$label <- c("-20","-10","C","C","C","G","10","20")
+gt$grobs[[19]]$children[[2]]$grobs[[2]]$children[[1]]$label <- c("-20","-10","G","C","C","G","10","20")
+gt$grobs[[20]]$children[[2]]$grobs[[2]]$children[[1]]$label <- c("-20","-10","A","C","C","G","10","20")
+gt$grobs[[21]]$children[[2]]$grobs[[2]]$children[[1]]$label <- c("-20","-10","T","C","C","G","10","20")
+
+gb <- ggplotify::as.ggplot(gt)
+
+#ggsave(paste("../output/Supplementary_Fig_3_4bp.jpg"), plot =gb, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+```
+
+## Supplementary Figure 3: combine Supplementary Figure 3A, Supplementary Figure 3B
+
+```{r}
+g <- plot_grid(ga,gb, rel_widths = c(1,1), labels=c("a", "b"), ncol=1,label_size = 20)
+#ggsave(paste("../output/Fig_3EF.pdf"), plot = small_size, device = "pdf",width = 20, height=12,units = "in", dpi=600, bg = "white", scale = 0.78)
+ggsave(paste("../output/Supplementary_Fig_3.jpg"), plot = g, device = "jpg",width = 20, height=24,units = "in", dpi=600, bg = "white", scale = 1)
+```

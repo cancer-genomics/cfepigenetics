@@ -1,0 +1,85 @@
+---
+title: "Supplementary_Figure5.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Supplementary Figure 5.
+
+```{r}
+library("ggplot2")
+library("tidyverse")
+library("cowplot")
+```
+
+
+## Supplementary Figure 5: 
+
+```{r}
+t <- readRDS("../data/healthy_cpggroups.rds")
+t$nchar <- nchar(t$motif)
+t <- t %>%
+  group_by(group, beta, nchar) %>%
+  summarise(nstart = sum(start_all), nover = sum(over_all))
+colnames(t) <- c("group", "beta", "nchar", "start_all", "over_all")
+t$group <- sub("hg19_cpg_", "", t$group)
+t$group <- sub("inter", "Open sea", t$group)
+t$group <- sub("islands", "Islands", t$group)
+t$group <- sub("shores", "Shores", t$group)
+t$group <- sub("shelves", "Shelves", t$group)
+t$group <- factor(t$group, levels = c("Islands", "Shores", "Shelves", "Open sea"))
+#t[which(nchar(t$motif) == 3),]$motif <- paste0(substr(t[which(nchar(t$motif) == 3),]$motif, 1,1), " | ", substr(t[which(nchar(t$motif) == 3),]$motif, 2,3))
+#t[which(nchar(t$motif) == 4),]$motif <- paste0(substr(t[which(nchar(t$motif) == 4),]$motif, 1,1), " | ", substr(t[which(nchar(t$motif) == 4),]$motif, 2,4))
+t$motif <- "cg"
+t[which(t$nchar == 3),]$motif <- "A/T/C/G | CG"
+t[which(t$nchar == 4),]$motif <- "A/T/C/G | CCG"
+t$motif <- factor(t$motif, levels = c("A/T/C/G | CG", "A/T/C/G | CCG"))
+t$ratio <- t$start_all / t$over_all
+plot1 <- ggplot(t[which(nchar(as.character(t$motif)) == 12),], aes(x=beta, y=ratio)) +
+  geom_bar(stat="identity", position = "dodge", aes(fill=beta)) +
+  facet_grid(motif~group) +
+  theme_classic(base_size = 20) + 
+  theme(text = element_text(size=16),
+        axis.text.x = element_text(angle = 0, hjust=0.5),
+        axis.title.y = element_text(margin = margin(r = 20, l=20)),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "outside",
+        legend.position = "none") +
+  scale_fill_gradient(low="#77C8DD", high="#004766") + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,0.01),
+                     breaks = c(0.01, 0.0075,0.005,0.0025,0)) +
+  scale_x_continuous(labels=c("0", "1"),
+                   breaks = c(0, 1)) +
+  #xlab("Methylation (beta-value)") +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CGs")
+plot2 <- ggplot(t[which(nchar(as.character(t$motif)) == 13),], aes(x=beta, y=ratio)) +
+  geom_bar(stat="identity", position = "dodge", aes(fill=beta)) +
+  facet_grid(motif~group) +
+  theme_classic(base_size = 20) + 
+  theme(text = element_text(size=16),
+        axis.text.x = element_text(angle = 0, hjust=0.5),
+        axis.title.y = element_text(margin = margin(r = 20, l=20)),
+        axis.title.x = element_text(margin = margin(t = 20, b=20)),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "outside",
+        legend.position = "none") +
+  scale_fill_gradient(low="#77C8DD", high="#004766") + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,0.01),
+                     breaks = c(0.01, 0.0075,0.005,0.0025,0)) +
+  scale_x_continuous(labels=c("0", "1"),
+                   breaks = c(0, 1)) +
+  xlab("Methylation (beta-value)") +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs")
+plot <- plot_grid(plot1, plot2, nrow=2, rel_heights = c(0.9,1))
+ggsave(paste("../output/Supplementary_Fig_5.jpg"), plot = plot, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+
+t[which(t$motif == "A/T/C/G | CG"),] %>%
+  group_by(group) %>%
+  summarise(min = min(ratio), max = max(ratio), ratio = max(ratio)/min(ratio))
+```

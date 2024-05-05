@@ -1,0 +1,211 @@
+---
+title: "Pre_Figure2.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+## Prerequisites:
+
+In order to generate the plots from figure 2, we process the low coverage cfDNA sequencing data from 543 healthy individuals and the methylation data as published by Moss et al. We make a new folder for intermediary files, which will contain files too large to save on github. 
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/Moss")
+dir.create("../../cfepigenetics_data/Moss/results")
+dir.create("../../cfepigenetics_data/reads_per_tilebig")
+dir.create("../../cfepigenetics_data/reads_per_tilesmall")
+dir.create("../../cfepigenetics_data/Moss_cases")
+dir.create("../../cfepigenetics_data/Moss_cases_75")
+dir.create("../../cfepigenetics_data/Moss_cases_100")
+dir.create("../../cfepigenetics_data/Moss_cases_125")
+dir.create("../../cfepigenetics_data/position_in_read")
+dir.create("../../cfepigenetics_data/read_counts")
+dir.create("../../cfepigenetics_data/som_chrx_motifs")
+dir.create("../../cfepigenetics_data/som_chrx")
+```
+
+
+## Process the data from the Moss et al. 
+
+Download and extract the data (from command line in the newly created directory)
+
+`wget ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE122nnn/GSE122126/suppl/GSE122126_RAW.tar`
+`tar -xvf GSE122126_RAW.tar`
+
+Process the files
+
+```{r}
+path <- "../../cfepigenetics_data/Moss"
+if (!file.exists(file.path(path, "results", "healthy.rds"))) {
+  files <- list.files(path)
+  foi <- c("GSM3455776", "GSM3455777", "GSM3455778", "GSM3455779", "GSM3455780", "GSM3455781", "GSM3455782", "GSM3455783")
+  foi_legend <- c("young_male_1", "young_male_2", "young_female_1", "young_female_2", "old_male_1", "old_male_2", "old_female_1", "old_female_2")
+  array <- c()
+  f <- c()
+  slide <- c()
+  for (i in foi) {
+    array <- c(array, unlist(strsplit(files[grep("Grn", files)][grep(i, files[grep("Grn", files)])], "_"))[3])
+    f <- c(f, files[grep("Grn", files)][grep(i, files[grep("Grn", files)])],files[grep("Red", files)][grep(i, files[grep("Red", files)])])
+    slide <- c(slide, as.numeric(unlist(strsplit(files[grep("Grn", files)][grep(i, files[grep("Grn", files)])], "_"))[2]))
+  }
+
+  targets <- data.frame("Sample_Name" = paste0(slide, "_", array),
+                        "Sample_Well" = NA,
+                        "Sample_Plate" = NA,
+                        "Sample_Group" = NA,
+                        "Pool_ID" = foi_legend,
+                        "Array" = array,
+                        "Slide" = slide,
+                        "Basename" = file.path(path,paste0(foi, "_", slide, "_", array)))
+  RGset <- read.metharray.exp(targets = targets)
+  GRset.funnorm <- preprocessFunnorm(RGset, bgCorr = TRUE, dyeCorr = TRUE, ratioConvert=T)
+  Mdata.mapped <- mapToGenome(GRset.funnorm)
+  beta <- getBeta(Mdata.mapped)
+  annotation <- getAnnotation(Mdata.mapped)
+  position <- annotation[1:2]
+  total <- merge(position, beta, by=0)
+  saveRDS(total, file.path(path, "results", "healthy.rds"))
+}
+
+#remove files that were not used: 
+protect <- c()
+for (i in 1:nrow(targets)) {
+  temp_protect <- grep(targets[i,]$Basename, paste0("../../cfepigenetics_data/Moss/", files))
+  protect <- c(protect, temp_protect)
+}
+files_remove <- files[-protect]
+files_remove <- files_remove[grep(".idat.gz", files_remove)]
+file.remove(file.path(path, files_remove))
+file.remove(file.path(path, "GSE122126_RAW.tar"))
+```
+
+
+files to process:
+  *analysis/code/reads_per_tilebig.sh* -> outputs "../../cfepigenetics_data/reads_per_tilebig"
+    Combines the mononucleosomal reads (size >= 100 and <= 220) of 543 samples from healthy individuals per big bin (5000k bases).
+  *analysis/code/reads_per_tilesmall.sh* -> outputs "../../cfepigenetics_data/reads_per_tilesmall"
+    Calculates the coverage, average fragment size and window protection score (adjusted and normalized) for each position of a small bin (100k bases).
+  *analysis/code/process_samples_count_reads_epic.sh* -> outputs "../../../cfepigenetics_data/Moss_cases"
+    Extracts per case the amount of fragments starting at and around the CpGs in the EPIC array
+  *analysis/code/position_in_read.sh* -> outputs "../../../cfepigenetics_data/Moss_cases"
+    Calculates the position of CG and CCG motifs in reads, as broken down by their level of methylation
+  *analysis/code/read_counts.sh* -> outputs "../../../cfepigenetics_data/read_counts"
+    Calculates the amount of reads in every sample, broken down as all reads, reads smaller than 100bp, reads between 100bp and 220bp, reads larger than 220bp, somatic chromosomes reads, mononucleosomal somatic reads, sex chromosome reads, mononucleosomal sex chromosome reads
+  *analysis/code/som_chrx_motifs.sh* -> outputs "../../../cfepigenetics_data/som_chrx_motifs"
+    Extracts the positions of all the different motifs and annotates their position in respect to islands, shores, shelves and open-sea
+  *analysis/code/som_chrx.sh* -> outputs "../../../cfepigenetics_data/som_chrx"
+
+
+## Combine the data from the different cases, overlapping the EPIC array
+
+```{r}
+# Collect data for cases with a +/- 50bp window around the breakpoint
+input_path <- "../../cfepigenetics_data/Moss_cases"
+ls <- list.files(input_path)
+m <- matrix(0, 865859, 8)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(input_path, file))
+  m <- m + as.matrix(temp[,c(5:12)])
+}
+m_final <- cbind(temp[,c(1,2,3,4,13)], as.data.frame(m))
+saveRDS(m_final, "../data/Moss_ratios.rds")
+
+# Collect data for cases with a +/- 75bp window around the breakpoint
+input_path <- "../../cfepigenetics_data/Moss_cases_75"
+ls <- list.files(input_path)
+m <- matrix(0, 865859, 8)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(input_path, file))
+  m <- m + as.matrix(temp[,c(5:12)])
+}
+m_final <- cbind(temp[,c(1,2,3,4,13)], as.data.frame(m))
+saveRDS(m_final, "../data/Moss_75_ratios.rds")
+
+# Collect data for cases with a +/- 100bp window around the breakpoint
+input_path <- "../../cfepigenetics_data/Moss_cases_100"
+ls <- list.files(input_path)
+m <- matrix(0, 865859, 8)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(input_path, file))
+  m <- m + as.matrix(temp[,c(5:12)])
+}
+m_final <- cbind(temp[,c(1,2,3,4,13)], as.data.frame(m))
+saveRDS(m_final, "../data/Moss_100_ratios.rds")
+
+# Collect data for cases with a +/- 125bp window around the breakpoint
+input_path <- "../../cfepigenetics_data/Moss_cases_125"
+ls <- list.files(input_path)
+m <- matrix(0, 865859, 8)
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(input_path, file))
+  m <- m + as.matrix(temp[,c(5:12)])
+}
+m_final <- cbind(temp[,c(1,2,3,4,13)], as.data.frame(m))
+saveRDS(m_final, "../data/Moss_125_ratios.rds")
+```
+
+
+## Combine the data from the location of CpGs and CCGs in the overlapping reads
+
+```{r}
+input_path <- "../../cfepigenetics_data/position_in_read"
+reads_input_path <- "../../cfepigenetics_data/read_counts"
+ls <- list.files(reads_input_path)
+m <- tibble()
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(input_path, file))
+  reads_temp <- readRDS(file.path(reads_input_path, file))
+  temp$case <- basename(file)
+  temp$somatic_all <- reads_temp$somatic_all
+  m <- rbind(m, temp)
+}
+saveRDS(m, "../data/position_in_read.rds")
+```
+
+
+## Combine the data from the read counts
+
+```{r}
+input_path <- "../../cfepigenetics_data/read_counts"
+ls <- list.files(input_path)
+m <- tibble()
+for (file in ls) {
+  print(file)
+  temp <- readRDS(file.path(input_path, file))
+  temp$case <- basename(file)
+  m <- rbind(m, temp)
+}
+saveRDS(m, "../data/read_counts.rds")
+```
+
+
+## Combine the chromosome X-data from the different cases
+
+```{r}
+ls <- list.files("../../cfepigenetics_data/som_chrx", full.names = T)
+done <- c()
+f <- tibble()
+for (file in ls) {
+  print(file)
+  if (!basename(file) %in% done) {
+    temp <- readRDS(file)
+    f <- rbind(f, temp)
+    done <- c(done, basename(file))
+  }
+}
+val_files <- readRDS("../data/selected_validation_files.rds")
+luc_files <- readRDS("../data/selected_lucas_files.rds")
+f$sex <- "NA"
+f[which(f$case %in% basename(val_files[which(val_files$sex == "male"),]$pgdx_id)),]$sex <- "male"
+f[which(f$case %in% basename(val_files[which(val_files$sex == "female"),]$pgdx_id)),]$sex <- "female"
+f[which(f$case %in% basename(luc_files[which(luc_files$sex == "male"),]$pgdx_id)),]$sex <- "male"
+f[which(f$case %in% basename(luc_files[which(luc_files$sex == "female"),]$pgdx_id)),]$sex <- "female"
+saveRDS(f, "../data/som_chrx.rds")
+```
+

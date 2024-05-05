@@ -1,0 +1,397 @@
+---
+title: "Figure2.rmd"
+author: "Michael Noe"
+date: "2024-01-18"
+output: html_document
+---
+
+## Pre-requisites
+
+These packages are necessary to make the plots that make up Figure 2. 
+
+```{r}
+library("tidyverse")
+library("ggplot2")
+library("annotatr")
+library("cowplot")
+library("data.table")
+library("GenomicRanges")
+library("grid")
+library("ggpubr")
+```
+
+## Figure 2A
+
+```{r}
+t <- readRDS("../data/position_in_read.rds")
+t_normalizer <- unique(t[,c(5,6)])
+t_normalizer$normal <- t_normalizer$somatic_all / mean(t_normalizer$somatic_all)
+t$normal <- t_normalizer[match(t$case, t_normalizer$case),]$normal
+t$n <- t$n / t$normal
+t_b_small <- tibble()
+for (i in c(0.1, 0.2, 0.3, 0.4, 0.5)) {
+  t_b_small_temp <- t[which(t$beta <= i),] %>% 
+    group_by(diff, case, motif) %>%
+    summarise(n = sum(n))
+  t_b_small_temp$beta <- i
+  t_b_small <- rbind(t_b_small, t_b_small_temp)
+}
+#t_b_small$beta <- paste0("<= ", t_b_small$beta)
+t_b_large <- tibble()
+for (i in c(0.5, 0.6, 0.7, 0.8, 0.9)) {
+  t_b_large_temp <- t[which(t$beta >= i),] %>% 
+    group_by(diff, case, motif) %>%
+    summarise(n = sum(n))
+  t_b_large_temp$beta <- 1 - i
+  t_b_large <- rbind(t_b_large, t_b_large_temp)
+}
+#t_b_large$beta <- paste0(">= ", t_b_large$beta)
+
+
+t_b_small$group <- "unmethylated"
+t_b_large$group <- "methylated"
+
+t_b <- rbind(t_b_small, t_b_large)
+t_b$beta <- factor(t_b$beta, levels = c(0.1, 0.2, 0.3, 0.4, 0.5))
+
+
+for (i in unique(t_b$beta)) {
+  t_b[which((t_b$beta == i) & (t_b$motif == "CG") & (t_b$group == "unmethylated")),]$n <- t_b[which((t_b$beta == i) & (t_b$motif == "CG") & (t_b$group == "unmethylated")),]$n * (mean(t_b[which((t_b$beta == i) & (t_b$motif == "CG") & (t_b$group == "methylated")),]$n) / mean(t_b[which((t_b$beta == i) & (t_b$motif == "CG") & (t_b$group == "unmethylated")),]$n))
+    t_b[which((t_b$beta == i) & (t_b$motif == "CCG") & (t_b$group == "unmethylated")),]$n <- t_b[which((t_b$beta == i) & (t_b$motif == "CCG") & (t_b$group == "unmethylated")),]$n * (mean(t_b[which((t_b$beta == i) & (t_b$motif == "CCG") & (t_b$group == "methylated")),]$n) / mean(t_b[which((t_b$beta == i) & (t_b$motif == "CCG") & (t_b$group == "unmethylated")),]$n))
+}
+
+t_b.summary <- t_b %>%
+  group_by(diff, beta, motif, group) %>%
+  summarise(
+    sd = sd(n, na.rm = TRUE),
+    n = mean(n)
+  )
+t_b.summary$beta <- factor(t_b.summary$beta, levels = c(0.1, 0.2, 0.3, 0.4, 0.5))
+t_b$group_beta <- paste0(t_b$group, "_", t_b$beta)
+t_b.summary$group_beta <- paste0(t_b.summary$group, "_", t_b.summary$beta)
+t_b$beta <- as.numeric(as.character(t_b$beta))
+t_b$beta <- paste0("methylated: beta >= ", 1 - t_b$beta, ";\nunmethylated: beta <= ", t_b$beta)
+t_b.summary$beta <- as.numeric(as.character(t_b.summary$beta))
+t_b.summary$beta <- paste0("methylated: beta >= ", 1 - t_b.summary$beta, ";\nunmethylated: beta <= ", t_b.summary$beta)
+
+plot_cg <- ggplot(t_b[which((t_b$diff >= 1) & (t_b$diff <= 40) & (t_b$motif == "CG")),], aes(x=diff, y=n, colour=group_beta, fill=group_beta)) +
+  geom_point(position=position_jitter(h=0.01, w=0.4), alpha = 1, size = 0.1) +
+  geom_bar(stat = "identity", data = t_b.summary[which((t_b.summary$diff>= 1) & (t_b.summary$diff <= 40) & (t_b.summary$motif == "CG")),], colour="black", alpha=0.7) +
+   geom_errorbar(
+    aes(ymin = n-sd, ymax = n+sd),
+    data = t_b.summary[which((t_b.summary$diff>= 1) & (t_b.summary$diff <= 40) & (t_b.summary$motif == "CG")),], width = 0.2, colour="black") +
+  facet_grid(rows = vars(beta),
+             cols = vars(group),
+             scales = "free_y",
+             space = "fixed") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_text(margin = margin(l = 20, r = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 40)),
+        #plot.title = element_text(hjust = 0.5, margin = margin(t = 20, b = 20)),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "top",
+        legend.position = "none",
+        strip.text.y.right = element_text(angle = 0)) +
+  scale_fill_manual(values=c("#004766", "#255672", "#3d667e", "#53768A", "#698696", "#77c8dd", "#93cfe3", "#acd7e7", "#c2deeb", "#d7e6ee")) +
+  scale_colour_manual(values=c("#004766", "#255672", "#3d667e", "#53768A", "#698696", "#77c8dd", "#93cfe3", "#acd7e7", "#c2deeb", "#d7e6ee")) +
+  ylab("") +
+  xlab("Position in fragment") +
+  #ggtitle("Position of \"CG\" in the fragment, based on methylation-status of that \"CG\".") +
+  ggtitle("")
+
+#ggsave("../output_final/Supplementary_Fig_2.jpg", plot = plot_cg, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+
+plot_ccg <- ggplot(t_b[which((t_b$diff >= 1) & (t_b$diff <= 40) & (t_b$motif == "CCG")),], aes(x=diff, y=n, colour=group_beta, fill=group_beta)) +
+  geom_point(position=position_jitter(h=0.01, w=0.4), alpha = 1, size = 0.1) +
+  geom_bar(stat = "identity", data = t_b.summary[which((t_b.summary$diff>= 1) & (t_b.summary$diff <= 40) & (t_b.summary$motif == "CCG")),], colour="black", alpha=0.7) +
+   geom_errorbar(
+    aes(ymin = n-sd, ymax = n+sd),
+    data = t_b.summary[which((t_b.summary$diff>= 1) & (t_b.summary$diff <= 40) & (t_b.summary$motif == "CCG")),], width = 0.2, colour="black") +
+  facet_grid(rows = vars(beta),
+             cols = vars(group),
+             scales = "free_y",
+             space = "fixed") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_text(margin = margin(l = 20, r = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 40)),
+        plot.title = element_text(hjust = 0.5, margin = margin(t = 20, b = 20)),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "top",
+        legend.position = "none",
+        strip.text.y.right = element_text(angle = 0)) +
+  scale_fill_manual(values=c("#004766", "#255672", "#3d667e", "#53768A", "#698696", "#77c8dd", "#93cfe3", "#acd7e7", "#c2deeb", "#d7e6ee")) +
+  scale_colour_manual(values=c("#004766", "#255672", "#3d667e", "#53768A", "#698696", "#77c8dd", "#93cfe3", "#acd7e7", "#c2deeb", "#d7e6ee")) +
+  ylab("") +
+  xlab("Position in fragment") +
+  ggtitle("Position of \"CCG\" in the fragment, based on methylation-status of that \"CCG\".")
+
+#ggsave("../output_final/reviewer1_plot1_ccg.jpg", plot = plot_ccg, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+
+plot2A <- ggplot(t_b[which((t_b$diff >= 1) & (t_b$diff <= 40) & (t_b$motif == "CG") & (t_b$beta == "methylated: beta >= 0.7;\nunmethylated: beta <= 0.3")),], aes(x=diff, y=n, colour=group_beta, fill=group_beta)) +
+  geom_point(position=position_jitter(h=0.01, w=0.4), alpha = 1, size = 0.1) +
+  geom_bar(stat = "identity", data = t_b.summary[which((t_b.summary$diff>= 1) & (t_b.summary$diff <= 40) & (t_b.summary$motif == "CG") & (t_b.summary$beta == "methylated: beta >= 0.7;\nunmethylated: beta <= 0.3")),], colour="black", alpha=0.7) +
+   geom_errorbar(
+    aes(ymin = n-sd, ymax = n+sd),
+    data = t_b.summary[which((t_b.summary$diff>= 1) & (t_b.summary$diff <= 40) & (t_b.summary$motif == "CG") & (t_b.summary$beta == "methylated: beta >= 0.7;\nunmethylated: beta <= 0.3")),], width = 0.2, colour="black") +
+  facet_grid(cols = vars(group),
+             scales = "free_y",
+             space = "fixed") +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        axis.title.y = element_text(margin = margin(l = 20, r = 20)),
+        axis.title.x = element_text(margin = margin(t = 20, b = 40)),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "top",
+        legend.position = "none",
+        strip.text.y.right = element_text(angle = 0)) +
+  scale_fill_manual(values=c("#004766", "#77c8dd")) +
+  scale_colour_manual(values=c("#004766", "#77c8dd")) +
+  ylab("") +
+  xlab("Position in fragment")
+```
+
+## Figure 2B and 2C
+
+```{r}
+t <- readRDS("../data/Moss_ratios.rds")
+t <- t[-which(t$chr %in% c("chrX", "chrY")),]
+
+acg_fwd <- t[which(substr(t$seq, 2, 4) == "ACG"),c(2,3,4,5,8,9)]
+acg_bwd <- t[which(substr(t$seq, 3, 5) == "CGT"),c(2,3,4,5,10,11)]
+colnames(acg_bwd) <- colnames(acg_fwd)
+acg <- rbind(acg_fwd, acg_bwd)
+acg$group <- "A | CG"
+ccg_fwd <- t[which(substr(t$seq, 2, 4) == "CCG"),c(2,3,4,5,8,9)]
+ccg_bwd <- t[which(substr(t$seq, 3, 5) == "CGG"),c(2,3,4,5,10,11)]
+colnames(ccg_bwd) <- colnames(ccg_fwd)
+ccg <- rbind(ccg_fwd, ccg_bwd)
+ccg$group <- "C | CG"
+gcg_fwd <- t[which(substr(t$seq, 2, 4) == "GCG"),c(2,3,4,5,8,9)]
+gcg_bwd <- t[which(substr(t$seq, 3, 5) == "CGC"),c(2,3,4,5,10,11)]
+colnames(gcg_bwd) <- colnames(gcg_fwd)
+gcg <- rbind(gcg_fwd, gcg_bwd)
+gcg$group <- "G | CG"
+tcg_fwd <- t[which(substr(t$seq, 2, 4) == "TCG"),c(2,3,4,5,8,9)]
+tcg_bwd <- t[which(substr(t$seq, 3, 5) == "CGA"),c(2,3,4,5,10,11)]
+colnames(tcg_bwd) <- colnames(gcg_fwd)
+tcg <- rbind(tcg_fwd, tcg_bwd)
+tcg$group <- "T | CG"
+t <- rbind(acg, ccg, gcg, tcg)
+
+all10bars <- t
+all10bars$subgroup <- round(all10bars$beta, digits = 1)
+all10bars$group <- factor(all10bars$group, levels=c("C | CG", "G | CG", "A | CG", "T | CG"))
+
+all10bars %>%
+  group_by(group, subgroup) %>%
+  summarise(ratio = sum(start_cg) / sum(start_cg_over)) %>%
+  group_by(group) %>%
+  summarise(min = min(ratio), max = max(ratio), ratio = max(ratio) / min(ratio))
+
+plot2b <- all10bars %>%
+  group_by(group, subgroup) %>%
+  summarise(ratio = sum(start_cg) / sum(start_cg_over)) %>%
+  ggplot(aes(x=factor(subgroup), y=ratio, fill=subgroup)) +
+  geom_bar(stat="identity", position = "dodge") +
+  facet_wrap(~group, nrow=1) +
+  theme_classic(base_size = 20) +
+  #xlab("Methylation (beta-value)") +
+  #ylab(expression(atop("Fraction of cfDNA fragments", paste("starting or ending at CGs")))) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CGs") + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,0.0105),
+                     breaks = c(0.01,0.0075,0.005,0.0025,0)) +
+  scale_x_discrete(labels=c("0", "1"),
+                   breaks = c(0,1)) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_text(angle = 0, hjust=0.5),
+        #axis.text.x = element_blank(),
+        #axis.title.y = element_text(margin = margin(r = 5)),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "outside",
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_fill_gradient(low="#77C8DD", high="#004766")
+
+
+t <- readRDS("../data/Moss_ratios.rds")
+t <- t[-which(t$chr %in% c("chrX", "chrY")),]
+
+accg_fwd <- t[which(substr(t$seq, 1, 4) == "ACCG"),c(2,3,4,5,6,7)]
+accg_bwd <- t[which(substr(t$seq, 3, 6) == "CGGT"),c(2,3,4,5,12,13)]
+colnames(accg_bwd) <- colnames(accg_fwd)
+accg <- rbind(accg_fwd, accg_bwd)
+accg$group <- "A | CCG"
+cccg_fwd <- t[which(substr(t$seq, 1, 4) == "CCCG"),c(2,3,4,5,6,7)]
+cccg_bwd <- t[which(substr(t$seq, 3, 6) == "CGGG"),c(2,3,4,5,12,13)]
+colnames(cccg_bwd) <- colnames(cccg_fwd)
+cccg <- rbind(cccg_fwd, cccg_bwd)
+cccg$group <- "C | CCG"
+gccg_fwd <- t[which(substr(t$seq, 1, 4) == "GCCG"),c(2,3,4,5,6,7)]
+gccg_bwd <- t[which(substr(t$seq, 3, 6) == "CGGC"),c(2,3,4,5,12,13)]
+colnames(gccg_bwd) <- colnames(gccg_fwd)
+gccg <- rbind(gccg_fwd, gccg_bwd)
+gccg$group <- "G | CCG"
+tccg_fwd <- t[which(substr(t$seq, 1, 4) == "TCCG"),c(2,3,4,5,6,7)]
+tccg_bwd <- t[which(substr(t$seq, 3, 6) == "CGGA"),c(2,3,4,5,12,13)]
+colnames(tccg_bwd) <- colnames(gccg_fwd)
+tccg <- rbind(tccg_fwd, tccg_bwd)
+tccg$group <- "T | CCG"
+t <- rbind(accg, cccg, gccg, tccg)
+
+all10bars <- t
+all10bars$subgroup <- round(all10bars$beta, digits = 1)
+all10bars$group <- factor(all10bars$group, levels=c("C | CCG", "G | CCG", "A | CCG", "T | CCG"))
+
+all10bars %>%
+  group_by(group, subgroup) %>%
+  summarise(ratio = sum(start_ncg) / sum(start_ncg_over)) %>%
+  group_by(group) %>%
+  summarise(min = min(ratio), max = max(ratio), ratio = max(ratio) / min(ratio))
+
+plot2c <- all10bars %>%
+  group_by(group, subgroup) %>%
+  summarise(ratio = sum(start_ncg) / sum(start_ncg_over)) %>%
+  ggplot(aes(x=factor(subgroup), y=ratio, fill=subgroup)) +
+  geom_bar(stat="identity", position = "dodge") +
+  facet_wrap(~group, nrow=1) +
+  theme_classic(base_size = 20) +
+  #xlab("Methylation (beta-value)") +
+  #ylab(expression(atop("Fraction of cfDNA fragments", paste("starting or ending at CGs")))) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs") + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,0.0125),
+                     breaks = c(0.0125, 0.01,0.0075,0.005,0.0025,0)) +
+  scale_x_discrete(labels=c("0", "1"),
+                   breaks = c(0,1)) +
+  theme(text = element_text(size=16),
+        axis.text.x = element_text(angle = 0, hjust=0.5),
+        #axis.text.x = element_blank(),
+        #axis.title.y = element_text(margin = margin(r = 5)),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA),
+        panel.spacing=unit(2, "lines"),
+        strip.placement = "outside",
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_fill_gradient(low="#77C8DD", high="#004766")
+
+title <- textGrob("window: +/- 50 bps (total: 101 bps)", gp = gpar(col = "black", fontsize = 19))
+#plot2bc_50 <- plot_grid(title, plot2b, plot2c, ncol = 1, align="v", axis="bt", rel_heights = c(1, 5, 5), labels = c("a", "", ""), label_size = 20)
+#plot2BC <- plot_grid(plot2b, plot2c, ncol = 1, align="v", axis="bt", rel_heights = c(5, 5), labels = c("b", "c"), label_size = 20)
+#ggsave("../output_final/figure2bc_window50bp.jpg", plot = plot2bc_50, device = "jpeg",width = 20, height=12,units = "in", dpi=300)
+```
+
+
+## Figure 2D and 2E
+
+```{r}
+sum2 <- readRDS("../data/som_chrx.rds")
+
+sum2[which(nchar(sum2$motif) == 4),]$motif <- sub("CCG", " | CCG", sum2[which(nchar(sum2$motif) == 4),]$motif)
+sum2[which(nchar(sum2$motif) == 3),]$motif <- sub("CG", " | CG", sum2[which(nchar(sum2$motif) == 3),]$motif)
+sum2$motif <- factor(sum2$motif, levels=c("C | CCG", "G | CCG", "A | CCG", "T | CCG", "C | CG", "G | CG", "A | CG", "T | CG"))
+sum2$sex <- factor(sum2$sex, levels = c("male", "female"))
+sum <- sum2
+
+plot2D2 <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 7) & (sum$group == "islands") & (sum$chromosome == "chrX")) ,], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.013),
+                     breaks=c(0.0125,0.01,0.0075,0.005,0.0025,0)) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB"))  + 
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p ", after_stat(p.format))))
+plot2D1 <- ggplot(data=sum[which((nchar(as.character(sum$motif)) == 6) & (sum$group == "islands") & (sum$chromosome == "chrX")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0105)) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        plot.title = element_text(hjust = 0.5, vjust=0.1, size = 16)) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) +
+  ggtitle("Chromosome X") + 
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p ", after_stat(p.format))))
+
+plot2E2 <- ggplot(data=sum2[which((nchar(as.character(sum2$motif)) == 7) & (sum2$group == "islands") & (sum2$chromosome == "somatic")) ,], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     limits = c(0,0.013),
+                     breaks=c(0.0125,0.01,0.0075,0.005,0.0025,0)) +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CCGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
+        text = element_text(size=16),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20))) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) + 
+  stat_compare_means(method = "t.test", size = 3, aes(label = paste0("p = ", after_stat(p.format))))
+
+plot2E1 <- ggplot(data=sum2[which((nchar(as.character(sum2$motif)) == 6) & (sum2$group == "islands")  & (sum2$chromosome == "somatic")),], aes(x = sex, y=ratio, fill=sex)) +
+  geom_jitter(size=0.4, alpha=1, aes(colour=sex)) +
+  geom_boxplot(outlier.shape = NA, aes(alpha = 0.1)) +
+  scale_y_continuous(labels = scales::percent,
+                     breaks = c(0.01,0.0075,0.005,0.0025,0),
+                     limits = c(0,0.0105)) +
+  ggtitle("Autosomes") +
+  ylab("Fraction of cfDNA fragments\nstarting or ending at CGs") + 
+  facet_grid(~motif) +
+  theme_classic(base_size = 20) +
+  theme(text = element_text(size=16),
+        #axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x.bottom = element_blank(),
+        strip.background=element_rect(color = NA,  fill=NA),
+        legend.position = "none",
+        axis.title.y = element_text(margin = margin(r = 20, l = 20)),
+        plot.title = element_text(hjust = 0.5, vjust=0.1, size = 16)) +
+  scale_fill_manual(values = c("#99CCFF", "#FF99BB")) +
+  scale_color_manual(values = c("#99CCFF", "#FF99BB")) + 
+  stat_compare_means(size = 3, method = "t.test", aes(label = paste0("p = ", after_stat(p.format))))
+```
+
+
+## Figure 2: combine Figure 2A, Figure 2B and 2C, Figure 2D and 2E
+`
+```{r}
+p1 <- plot_grid(plot2b, NULL, plot2D1, NULL, plot2E1, ncol=5, rel_widths = c(12,1,7, 1, 7), align="h", axis="bt", labels = c("b", "", "d", "", "e"), label_size = 20)
+p2 <- plot_grid(plot2c, NULL, plot2D2, NULL, plot2E2, ncol=5, rel_widths = c(12,1,7, 1, 7), align="h", axis="bt", labels = c("c", "", "", "", ""),  label_size = 20)
+p12 <- plot_grid(p1,NULL, p2,ncol=1,rel_heights = c(0.9,0.05,1.1), align="v")
+plot2 <- plot_grid(plot2A, p12, ncol=1,rel_heights= c(1,2), labels = c("a", ""), label_size = 20)
+
+
+ggsave(paste("../output/Fig_2.jpg"), plot = plot2, device = "jpeg",width = 180, height=108,units = "mm", dpi=600, bg = "white", scale = 3)
+```

@@ -1,0 +1,74 @@
+---
+title: "Supplementary_Figure10.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r}
+dir.create("../../cfepigenetics_data")
+dir.create("../../cfepigenetics_data/cpg_500000_topbot1000")
+dir.create("../../cfepigenetics_data/tss_500000_topbot1000")
+```
+
+
+## Process the data
+
+*analysis/code/cpg_500000_topbot1000.sh* -> outputs "../../cfepigenetics_data/cpg_500000_topbot1000"
+    Collect information on coverage and size around CpG-islands.
+*analysis/code/tss_500000_topbot1000.sh* -> outputs "../../cfepigenetics_data/tss_500000_topbot1000"
+    Collect information on coverage and size around TSS-sites.
+*analysis/code/cpg_500000_topbot1000_beta.R* -> outputs "../data/cpg_500000_topbot1000_beta.rds"
+    Collect information on average beta-values around CpG-islands.
+*analysis/code/tss_500000_topbot1000_beta.R* -> outputs "../data/tss_500000_topbot1000_beta.rds"
+    Collect information on average beta-values around TSS-sites.
+  
+
+## Construct files with metrics around the CpG-islands (1000 methylated and 1000 unmethylated)
+
+```{r}
+files <- list.files("../../cfepigenetics_data/cpg_500000_topbot1000", full.names = T)
+t <- tibble()
+for (file in files) {
+  print(basename(file))
+  temp <- readRDS(file)
+  t <- rbind(t, temp)
+}
+t[which(t$mean_size == 0),]$mean_size <- NA
+t[which(t$mean_size <= 160),]$mean_size <- 160
+t[which(t$mean_size >= 176),]$mean_size <- 176
+t[which(t$mean_cov == 0),]$mean_cov <- NA
+t[which(t$mean_cov <= 400),]$mean_cov <- 400
+t[which(t$mean_cov >= 2000),]$mean_cov <- 2000
+t <- t %>% 
+  group_by(relpos_500, beta) %>%
+  summarise(cov = mean(mean_cov, na.rm=T), size = mean(mean_size, na.rm=T))
+saveRDS(t, "../data/cpg_500000_topbot1000.rds")
+``` 
+
+
+## Construct files with metrics around the TSS-sites (1000 expressed and 1000 not expressed)
+
+```{r}
+files <- list.files("../../cfepigenetics_data/tss_500000_topbot1000", full.names = T)
+t <- tibble()
+for (file in files) {
+  print(basename(file))
+  temp <- readRDS(file)
+  t <- rbind(t, temp)
+}
+t[which(t$mean_size == 0),]$mean_size <- NA
+t[which(t$mean_size <= 160),]$mean_size <- 160
+t[which(t$mean_size >= 176),]$mean_size <- 176
+t[which(t$mean_cov == 0),]$mean_cov <- NA
+t[which(t$mean_cov <= 400),]$mean_cov <- 400
+t[which(t$mean_cov >= 2000),]$mean_cov <- 2000
+t$group <- "expressed"
+t[which(t$expression <= 5),]$group <- "not expressed"
+t <- t %>% 
+  group_by(relpos_500, group) %>%
+  summarise(cov = mean(mean_cov, na.rm = T), size = mean(mean_size, na.rm = T))
+saveRDS(t, "../data/tss_500000_topbot1000.rds")
+``` 
+
+

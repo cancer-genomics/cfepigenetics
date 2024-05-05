@@ -1,0 +1,44 @@
+---
+title: "Supplementary_Figure1.rmd"
+author: "Michael Noe"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r}
+dir.create("../../cfepigenetics_data/motifs_cfdna_144_167")
+```
+
+
+## Process the data
+
+ *analysis/code/motifs_cfdna_144_167.sh* -> outputs "../../../cfepigenetics_data/motifs_cfdna_144_167"
+    Gets nucleotide distributions over both 144bp cfDNA fragments and 167bp cfDNA fragments.
+
+## Construct a summary files containing the summary of the previous analysis
+
+```{r}
+loc <- "../../cfepigenetics_data/motifs_cfdna_144_167"
+ls <- list.files(loc)
+
+t <- tibble()
+for (file in ls) {
+  print(paste0(match(file, ls), " / ", length(ls)))
+  temp <- readRDS(file.path(loc, file))
+  if (nrow(temp) != 0) {
+    if (ncol(t) != 0) {
+      temp <- temp[,match(colnames(t), colnames(temp))]
+    }
+    t <- rbind(t, temp)
+    if (length(grep("N", t$Var1)) != 0) {
+      t <- t[-grep("N", t$Var1),]
+    }
+    t <- t %>%
+      group_by(Var1, pos, group, motif_length) %>%
+      summarise(Freq = sum(Freq))
+    t <- ungroup(t[,c(1,5,2,4,3)])
+    print(t[1,2])
+  }
+}
+saveRDS(t, "../data/motifs_cfdna_144_167.rds")
+```
