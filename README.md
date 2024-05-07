@@ -10,11 +10,11 @@ Analysis of epigenetic signals in cell-free DNA
 
 The following sections provide details for the analyses performed in:
 
-*DNA methylation and gene expression as determinants of genome-wide cell-free DNA fragmentation*
+*DNA methylation and gene expression as potential determinants of genome-wide cell-free DNA fragmentation*
 
 # Citation
-Michaël Noë, Dimitrios Mathios, Akshaya V. Annapragada, Shashikant Koul, Zacharia H. Foda, Jamie Medina, Stephen Cristiano, Christopher Cherry, Daniel C. Bruhm, Noushin Niknafs, Vilmos Adleff, Leonardo Ferreira, Hari Easwaran, Stephen Baylin, Jillian Phallen, Robert B. Scharpf, and Victor E. Velculescu. 
-DNA methylation and gene expression as determinants of genome-wide cell-free DNA fragmentation
+Michaël Noë, Dimitrios Mathios, Akshaya V. Annapragada, Shashikant Koul, Zacharia H. Foda, Jamie Medina, Stephen Cristiano, Christopher Cherry, Daniel C. Bruhm, Noushin Niknafs, Vilmos Adleff, Leonardo Ferreira, Hari Easwaran, Stephen Baylin, Jillian Phallen, Robert B. Scharpf, and Victor E. Velculescu.
+DNA methylation and gene expression as potential determinants of genome-wide cell-free DNA fragmentation
 
 # Abstract
 Circulating cell-free DNA (cfDNA) is emerging as a diagnostic avenue for cancer detection, but the characteristics and origins of cfDNA fragmentation in the blood are poorly understood.  We evaluated the effect of DNA methylation and gene expression on naturally occurring genome-wide cfDNA fragmentation through analysis of plasma from 969 individuals, including 182 with cancer.  cfDNA fragment ends occurring at preferred locations genome-wide more frequently contained CCs or CGs, and fragments ending with CGs or CCGs were enriched or depleted, respectively, at methylated CpG positions, consistent with structural models showing increased interaction of methylated CG fragment ends with nucleosomes.  Higher levels and larger sizes of cfDNA fragments were independently associated with regions of CpG methylation and reduced gene expression, and reflected differences in cfDNA fragmentation in tissue-specific pathways.  The effects of methylation and expression on cfDNA coverage were validated by analyses of human cfDNA in mice implanted with isogenic tumors with or without the mutant IDH1 chromatin modifier.  Tumor-related hypomethylation and increased gene expression were associated with global decrease in cfDNA fragment size that may explain the overall smaller cfDNA fragments observed in human cancers.  Cancer-specific methylation at CpGs of pancreatic cancer patients was associated with genome-wide changes in cfDNA fragment ends in patients with cancers.  These results provide a connection between epigenetic changes and cfDNA fragmentation that may have implications for disease detection.
@@ -77,7 +77,7 @@ Gene expression and DNA methylation data of other tumors and healthy white blood
 Pre-processing
 --------------
 
-In order to go from the raw sequencing-data, as presented in the 'fastq'-files, towards the GRanges-objects, containing information about cell-free DNA fragment positions (as defined by 'chromosome', 'start' and 'end'), we refer to the [GitHub-repository](https://github.com/cancer-genomics/reproduce_lucas_wflow) from the paper: Mathios et al., Nature Communications, 2021. In the [code-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code), there is a [pre-processing-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/pre-processing), containg the scripts to pre-process the 'fastq'-files. 
+In order to go from the raw sequencing-data, as presented in the 'fastq'-files, towards the GRanges-objects, containing information about cell-free DNA fragment positions (as defined by 'chromosome', 'start' and 'end'), we refer to the [GitHub-repository](https://github.com/cancer-genomics/reproduce_lucas_wflow) from the paper: Mathios et al., Nature Communications, 2021. In the [code-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code), there is a [pre-processing-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/pre-processing), containg the scripts to pre-process the 'fastq'-files.
 
 * [fastp.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/fastp.sh): We used '[fastp](https://github.com/OpenGene/fastp)' specifically to trim adapters, when the cell-free DNA fragments were shorter than the amount of read-out cycles, which would have led to reading into the adapter on the other side of the DNA-strand.
 * [align.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/align.sh): We used '[Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml)' to align the reads of the fastq-files to HG19.
@@ -232,7 +232,7 @@ Supplementary Figure 13
 
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_13.jpg" width = "400">
 
-* [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)). 
+* [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Supplementary_Figure13.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure13.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 13.
 
 Supplementary Figure 14
@@ -264,13 +264,13 @@ pander::pander(sessionInfo())
 
 **R version 4.3.2 (2023-10-31)**
 
-**Platform:** aarch64-apple-darwin20 (64-bit) 
+**Platform:** aarch64-apple-darwin20 (64-bit)
 
 **locale:**
 en_US.UTF-8||en_US.UTF-8||en_US.UTF-8||C||en_US.UTF-8||en_US.UTF-8
 
-**attached base packages:** 
+**attached base packages:**
 _stats_, _graphics_, _grDevices_, _utils_, _datasets_, _methods_ and _base_
 
-**loaded via a namespace (and not attached):** 
+**loaded via a namespace (and not attached):**
 _digest(v.0.6.33)_, _R6(v.2.5.1)_, _fastmap(v.1.1.1)_, _xfun(v.0.41)_, _cachem(v.1.0.8)_, _knitr(v.1.45)_, _htmltools(v.0.5.7)_, _rmarkdown(v.2.25)_, _lifecycle(v.1.0.4)_, _cli(v.3.6.1)_, _pander(v.0.6.5)_, _sass(v.0.4.7)_, _jquerylib(v.0.1.4)_, _compiler(v.4.3.2)_, _rstudioapi(v.0.15.0)_, _tools(v.4.3.2)_, _evaluate(v.0.23)_, _bslib(v.0.6.0)_, _Rcpp(v.1.0.11)_, _yaml(v.2.3.7)_, _rlang(v.1.1.2)_ and _jsonlite(v.1.8.7)_
