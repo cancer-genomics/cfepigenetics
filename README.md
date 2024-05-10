@@ -4,7 +4,7 @@ author: Michael Noe
 date: 2024-04-26
 ---
 
-Analysis of epigenetic signals in cell-free DNA
+Analyses of epigenetic signals in cell-free DNA
 ===============================================
 
 
@@ -50,48 +50,48 @@ Table of contents
 Introduction
 ------------
 
-The analyses explained in this file uses the data from previous studies (Christiano et al., Nature, 2019 and Mathios et al., Nature Communications, 2021). The data for the samples analyzed in these studies was deposited at the database of Genotypes and Phenotypes (dbGaP) and the European Genome-Phenome Archive (EGA). The GitHub-repositories for these studies explain how the data was analysed until a GenomicRanges (GRanges) object was made with the fragment chromosome, start- and end-positions ([pre-processing](https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/master/code/preprocessing) in the '[reproduce_lucas_wflow](https://github.com/cancer-genomics/reproduce_lucas_wflow)'-GitHub). These objects were saved as '.rds' file. Unlike BED-files (not used here), GRanges objects contain the start-position of the fragment, while BED-files use the position before the start-position as the first base in the fragment.
+Some of the analyses described in this repository relay on data from previous studies (Christiano et al., Nature, 2019 and Mathios et al., Nature Communications, 2021) that have been deposited at the database of Genotypes and Phenotypes (dbGaP) and the European Genome-Phenome Archive (EGA). The GitHub-repositories for these supporting studies provide additional details regarding how the data was processed ([pre-processing](https://github.com/cancer-genomics/reproduce_lucas_wflow/tree/master/code/preprocessing) in the '[reproduce_lucas_wflow](https://github.com/cancer-genomics/reproduce_lucas_wflow)'-GitHub). These objects were saved as '.rds' file and referred to as analytic data.  Some of the analytic data is provided as `GRanges` objects.  Unlike BED-files (not used here), GRanges objects contain the start-position of the fragment, while BED-files use the position before the start-position as the first base in the fragment.
 
-For the analyses explained in this file, we will start from raw-data as saved in '.rds'-files containing GRanges-objects. In order to construct the plots in the paper, we often generate temporary files which are too big or too numerous to upload to the GitHub repository. These files will be store in a folder on the same level as the folder containing the repository (cfepigenetics), called 'cfepigenetics_data'. The temporary files stored there will be used as input for a summarizing script that will generate a final summary-file, which is small enough to store into the [data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)-folder in this GitHub repository.
+For the analyses desribed in this README, we start from analytic data saved in '.rds'-files.  To construct the Figures in the paper, we often generate temporary files that are too big or numerous to upload to the GitHub repository. These files are stored in a top-level directory called 'cfepigenetics_data'. The temporary files stored there are used as input for scripts that generate a final summary-file that are small enough to store in the [data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)-folder of this repository.
 
 Available data used in analysis
 -------------------------------
 
-The data used in this study has been made publically available when published with previous studies.
+Datasets used in this study that have been made publicly available from previous publications:
 
 * Cristiano et al., Nature, 2019: the database of Genotypesand Phenotypes (dbGaP, study ID 34536).
 * Mathios et al., Nature Communications, 2021: the European Genome-Phenome Archive (EGA, EGAS00001005340).
 
-The methylation data of cell-free DNA used in this study was published before.
+Methylation datasets of cell-free DNA:
 
 * Moss et al., Nature Communications, 2018: the NCBI Gene Expression Omnibus (GEO, GSE1221261) database repository.
 * Loyfer et al., Nature, 2023: the NCBI Gene Expression Omnibus (GEO, GSE186458) database repository.
 
-The gene expression data of white-blood cells (myeloid) used in this study was made publically available.
+Gene expression datasets of white-blood cells (myeloid):
 
 * Uhlen et al., Science, 2015: data is available at [The Human Protein Atlas](https://v13.proteinatlas.org/download/rna.csv.zip)
 * [Genotype-Tissue Expression Project (GTEx)](https://gtexportal.org/home)
 
-Gene expression and DNA methylation data of other tumors and healthy white blood cells ([Supplementary Figure 15](#supplementary-figure-15)) was downloaded from the website of the [The Cancer Genome Atlas (TCGA)](https://portal.gdc.cancer.gov/).
+Gene expression and DNA methylation datasets of other tumors and healthy white blood cells ([Supplementary Figure 15](#supplementary-figure-15)) were downloaded from [The Cancer Genome Atlas (TCGA)](https://portal.gdc.cancer.gov/).
 
 
 Pre-processing
 --------------
 
-In order to go from the raw sequencing-data, as presented in the 'fastq'-files, towards the GRanges-objects, containing information about cell-free DNA fragment positions (as defined by 'chromosome', 'start' and 'end'), we refer to the [GitHub-repository](https://github.com/cancer-genomics/reproduce_lucas_wflow) from the paper: Mathios et al., Nature Communications, 2021. In the [code-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code), there is a [pre-processing-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/pre-processing), containg the scripts to pre-process the 'fastq'-files.
+Processing of raw sequencing data (fastq files) to generate GRanges-objects containing information about cell-free DNA fragment alignments (as defined by 'chromosome', 'start' and 'end'), we refer to the [GitHub-repository](https://github.com/cancer-genomics/reproduce_lucas_wflow) from the paper: Mathios et al., Nature Communications, 2021. In the [code-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code), there is a [pre-processing-folder](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/pre-processing), containing the scripts for pre-processing.
 
 * [fastp.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/fastp.sh): We used '[fastp](https://github.com/OpenGene/fastp)' specifically to trim adapters, when the cell-free DNA fragments were shorter than the amount of read-out cycles, which would have led to reading into the adapter on the other side of the DNA-strand.
 * [align.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/align.sh): We used '[Bowtie2](https://bowtie-bio.sourceforge.net/bowtie2/index.shtml)' to align the reads of the fastq-files to HG19.
 * [post_alignment.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/post_alignment.sh): We used '[Sambamba](https://lomereiter.github.io/sambamba/)' to flag duplicates and to extract cell-free DNA fragment information, like positions (as defined by 'chromosome', 'start' and 'end') and MAPQ-values, which are written to a BED-file.
-* [bed_to_granges.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/bed_to_granges.sh): We used a custom R-script ([01-bed_to_granges.r](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/01-bed_to_granges.r)), to transform the BED-file into a GRanges-object, saved as a '.rds'-file. During this process we also filter cell-free DNA fragments for having a MAPQ-value of => 30, in order to filter out low-quality mapped fragments.
+* [bed_to_granges.sh](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/bed_to_granges.sh): We used a custom R-script ([01-bed_to_granges.r](https://github.com/cancer-genomics/reproduce_lucas_wflow/blob/master/code/preprocessing/01-bed_to_granges.r)), to transform the BED-file into a GRanges-object, saved as a '.rds'-file. During this process we also filtered cell-free DNA fragments with MAPQ-value <= 30 to exclude low-quality alignments.
 
 Figure 1
 --------
 
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Fig_1.jpg" width = "400">
 
-* [Pre_Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure1.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure1.rmd): process provided summarized file (analytic data) and generate Figure 1.
+* [Pre_Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure1.rmd): contains a step-by-step guide with scripts to process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and to summarize these files (all samples).  The summary-file has been uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
+* [Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure1.rmd): processes the provided summarized file (analytic data) to generate Figure 1.
 * Figure 1D contains a 3D rendering of a nucleosome, as captured from the Protein Data Bank (structure [7COW](https://www.rcsb.org/structure/7cow)).
 
 
@@ -100,8 +100,8 @@ Figure 2
 
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Fig_2.jpg" width = "400">
 
-* [Pre_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure2.rmd): process provided summarized file (analytic data) and generate Figure 2.
+* [Pre_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step to process the raw data (GRanges-objects; per sample) to intermediary files (per sample) as well as a summarization step.  The summary-file is provided with this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
+* [Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure2.rmd): processes the provided summarized file (analytic data) to generate Figure 2.
 
 Figure 3
 --------
@@ -115,8 +115,8 @@ Figure 3
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Fig_3H.jpg" width = "400">
 
 * [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3.rmd): process provided summarized file (analytic data) and generate Figure 3 (except Figure 3E and 3F).
-* [Figure3EF.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3EF.rmd): process provided summarized file (analytic data) and generate Figure 3E and 3F.
+* [Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3.rmd): processes the provided summarized file (analytic data) to generate Figure 3 (except Figure 3E and 3F).
+* [Figure3EF.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3EF.rmd): processes the provided summarized file (analytic data) to generate Figure 3E and 3F.
 
 Figure 4
 --------
@@ -125,7 +125,7 @@ Figure 4
 
 * [Pre_Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure4.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Pre_Figure4_Model_Ensemble.Rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure4_Model_Ensemble.Rmd): code that uses the summarized file (all samples) to generate the prediction model and generate a summarized file of this model. The code uses a 10-fold cross validation method, which needs to be manually changed for every fold (indicated in the code).
-* [Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure4.rmd): process provided summarized file (analytic data) and generate Figure 4.
+* [Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure4.rmd): processes the provided summarized file (analytic data) to generate Figure 4.
 
 Supplementary Figure 1
 ----------------------
@@ -133,7 +133,7 @@ Supplementary Figure 1
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_1.jpg" width = "400">
 
 * [Pre_Supplementary_Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure1.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository. This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)). ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure1.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 1.
+* [Supplementary_Figure1.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure1.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 1.
 
 Supplementary Figure 2
 ----------------------
@@ -142,7 +142,7 @@ Supplementary Figure 2
 
 This figure is a variation on Figure 2A, using different beta-value cut-offs to define 'methylated' and 'unmethylated'.
 * [Pre_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure2.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 2.
+* [Supplementary_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure2.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 2.
 
 Supplementary Figure 3
 ----------------------
@@ -150,7 +150,7 @@ Supplementary Figure 3
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_3.jpg" width = "400">
 
 * [Pre_Supplementary_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure3.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 3.
+* [Supplementary_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure3.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 3.
 
 Supplementary Figure 4
 ----------------------
@@ -158,7 +158,7 @@ Supplementary Figure 4
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_4.jpg" width = "400">
 
 * [Pre_Supplementary_Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure4.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure4.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 4.
+* [Supplementary_Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure4.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 4.
 
 Supplementary Figure 5
 ----------------------
@@ -166,7 +166,7 @@ Supplementary Figure 5
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_5.jpg" width = "400">
 
 * [Pre_Supplementary_Figure5.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure5.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure5.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure5.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 5.
+* [Supplementary_Figure5.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure5.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 5.
 
 Supplementary Figure 6
 ----------------------
@@ -174,7 +174,7 @@ Supplementary Figure 6
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_6.jpg" width = "400">
 
 * [Pre_Supplementary_Figure4.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure4.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure6.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure6.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 6.
+* [Supplementary_Figure6.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure6.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 6.
 
 Supplementary Figure 7
 ----------------------
@@ -182,7 +182,7 @@ Supplementary Figure 7
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_7.jpg" width = "400">
 
 * [Pre_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure7.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure7.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 7.
+* [Supplementary_Figure7.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure7.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 7.
 
 Supplementary Figure 8
 ----------------------
@@ -190,7 +190,7 @@ Supplementary Figure 8
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_8.jpg" width = "400">
 
 * [Pre_Figure2.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure2.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure8.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure8.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 8.
+* [Supplementary_Figure8.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure8.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 8.
 
 Supplementary Figure 9
 ----------------------
@@ -201,7 +201,7 @@ Supplementary Figure 9
 
 * [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): generates a matrix, connecting CpG-islands (and beta-values) to the nearest transcription start site (TSS) (and gene-expression values), which is uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3.rmd): populates the previously generated matrix with information about coverage, fragment-size and nucleosome positioning ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure9.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure9.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 9.
+* [Supplementary_Figure9.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure9.rmd): processes the provided summarized file (analytic data) to generate Supplementary Figure 9.
 
 
 Supplementary Figure 10
@@ -210,14 +210,14 @@ Supplementary Figure 10
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_10.jpg" width = "400">
 
 * [Pre_Supplementary_Figure10.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Supplementary_Figure10.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure10.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure10.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 10.
+* [Supplementary_Figure10.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure10.rmd): process provided summarized file (analytic data) to generate Supplementary Figure 10.
 
 Supplementary Figure 11
 -----------------------
 
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_11.jpg" width = "400">
 
-* [Supplementary_Figure11.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure11.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 11.
+* [Supplementary_Figure11.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure11.rmd): process provided summarized file (analytic data) to generate Supplementary Figure 11.
 
 Supplementary Figure 12
 ----------------------
@@ -226,7 +226,7 @@ Supplementary Figure 12
 
 * [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): generates a matrix, connecting CpG-islands (and beta-values) to the nearest transcription start site (TSS) (and gene-expression values), which is uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)).
 * [Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3.rmd): populates the previously generated matrix with information about coverage, fragment-size and nucleosome positioning ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure12.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure12.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 12.
+* [Supplementary_Figure12.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure12.rmd): process provided summarized file (analytic data) to generate Supplementary Figure 12.
 
 Supplementary Figure 13
 -----------------------
@@ -234,7 +234,7 @@ Supplementary Figure 13
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_13.jpg" width = "400">
 
 * [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): contains a step-by-step guide which scripts will process the raw data (GRanges-objects; per sample) to intermediary files (per sample) and summarize them (all samples) into a summary-file, uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
-* [Supplementary_Figure13.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure13.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 13.
+* [Supplementary_Figure13.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure13.rmd): process provided summarized file (analytic data) to generate Supplementary Figure 13.
 
 Supplementary Figure 14
 -----------------------
@@ -244,7 +244,7 @@ Supplementary Figure 14
 
 * [Pre_Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Pre_Figure3.rmd): generates a matrix, connecting CpG-islands (and beta-values) to the nearest transcription start site (TSS) (and gene-expression values), which is uploaded to this repository ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)). This script requires the raw data (after [pre-processing](#pre-processing) the data from [Cristiano et al. and Mathios et al.](#required-data)).
 * [Figure3.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Figure3.rmd): populates the previously generated matrix with information about coverage, fragment-size and nucleosome positioning ([data](https://github.com/cancer-genomics/cfepigenetics/blob/main/data)).
-* [Supplementary_Figure14.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure14.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 14.
+* [Supplementary_Figure14.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure14.rmd): process provided summarized file (analytic data) to generate Supplementary Figure 14.
 
 Supplementary Figure 15
 -----------------------
@@ -252,7 +252,7 @@ Supplementary Figure 15
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_15A.jpg" width = "400">
 <img src="https://github.com/cancer-genomics/cfepigenetics/blob/main/output/Supplementary_Fig_15B.jpg" width = "400">
 
- [Supplementary_Figure15.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure15.rmd): process provided summarized file (analytic data) and generate Supplementary Figure 15.
+ [Supplementary_Figure15.rmd](https://github.com/cancer-genomics/cfepigenetics/blob/main/analysis/Supplementary_Figure15.rmd): process provided summarized file (analytic data) to generate Supplementary Figure 15.
 
 
 Session information
