@@ -14,11 +14,8 @@ The following sections provide details for the analyses performed in:
 
 # Citation
 Michaël Noë, Dimitrios Mathios, Akshaya V. Annapragada, Shashikant Koul, Zacharia H. Foda, Jamie Medina, Stephen Cristiano, Christopher Cherry, Daniel C. Bruhm, Noushin Niknafs, Vilmos Adleff, Leonardo Ferreira, Hari Easwaran, Stephen Baylin, Jillian Phallen, Robert B. Scharpf, and Victor E. Velculescu.
-<<<<<<< HEAD
 DNA methylation and gene expression as potential determinants of genome-wide cell-free DNA fragmentation
-=======
-DNA methylation and gene expression as determinants of genome-wide cell-free DNA fragmentation
->>>>>>> origin/main
+
 
 # Abstract
 Circulating cell-free DNA (cfDNA) is emerging as a diagnostic avenue for cancer detection, but the characteristics and origins of cfDNA fragmentation in the blood are poorly understood.  We evaluated the effect of DNA methylation and gene expression on naturally occurring genome-wide cfDNA fragmentation through analysis of plasma from 969 individuals, including 182 with cancer.  cfDNA fragment ends occurring at preferred locations genome-wide more frequently contained CCs or CGs, and fragments ending with CGs or CCGs were enriched or depleted, respectively, at methylated CpG positions, consistent with structural models showing increased interaction of methylated CG fragment ends with nucleosomes.  Higher levels and larger sizes of cfDNA fragments were independently associated with regions of CpG methylation and reduced gene expression, and reflected differences in cfDNA fragmentation in tissue-specific pathways.  The effects of methylation and expression on cfDNA coverage were validated by analyses of human cfDNA in mice implanted with isogenic tumors with or without the mutant IDH1 chromatin modifier.  Tumor-related hypomethylation and increased gene expression were associated with global decrease in cfDNA fragment size that may explain the overall smaller cfDNA fragments observed in human cancers.  Cancer-specific methylation at CpGs of pancreatic cancer patients was associated with genome-wide changes in cfDNA fragment ends in patients with cancers.  These results provide a connection between epigenetic changes and cfDNA fragmentation that may have implications for disease detection.
